@@ -1,4 +1,5 @@
 import shutil
+import threading
 from gppylib.commands.base import ExecutionError
 from gppylib.commands.gp import Psql
 from gppylib.commands.unix import getUserName, findCmdInPath, curr_platform, SUNOS

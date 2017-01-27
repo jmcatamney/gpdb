@@ -1600,6 +1600,15 @@ dumpTableData_copy(Archive *fout, void *dcontext)
 	check_sql_result(res, g_conn, q->data, PGRES_COMMAND_OK);
 	PQclear(res);
 
+	/* Add an entry to the dump progress table to indicate this table has finished dumping on this segment */
+	PQExpBuffer progressQry = createPQExpBuffer();
+	appendPQExpBuffer(progressQry, "INSERT INTO gpcrondump_progress VALUES (%d, %s, %s)",
+									g_dbID, tbinfo->dobj.namespace->dobj.name, tbinfo->dobj.name);
+	res = PQexec(g_conn, progressQry->data);
+	check_sql_result(res, g_conn, progressQry->data, PGRES_TUPLES_OK);
+	PQclear(res);
+	destroyPQExpBuffer(progressQry);
+
 	destroyPQExpBuffer(q);
 	return 1;
 }

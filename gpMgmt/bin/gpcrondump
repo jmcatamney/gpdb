@@ -662,6 +662,49 @@ class GpCronDump(Operation):
         except Exception, e:
             logger.warn("Could not remove signal file %s, backup will proceed without releasing pg_class lock." % lock_file_name)
 
+    def progress_handler(self, thread_stop):
+        logger.info("Beginning dump progress monitor thread")
+        num_segs = len(get_all_segment_addresses(self.context.master_port)) # need a more efficient way to get segment count
+        check_query = "select * from (select count(segment) as segcount, schemaname, tablename from gpcrondump_progress group by (schemaname, tablename)) as subquery where segcount = %d;" % num_segs 
+        delete_query = "delete from public.gpcrondump_progress where schemaname = '%s' and tablename = '%s';"
+        dburl = dbconn.DbURL(port=self.context.master_port, dbname=self.context.dump_database)
+        conn = dbconn.connect(dburl)
+        while not thread_stop.is_set():
+            curs = execSQL(conn, check_query)
+            results = curs.fetchall()
+            for row in results:
+                schema, table = row[1], row[2]
+                logger.info("Finished dumping table %s.%s" % (schema, table))
+                execSQL(conn, delete_query % (schema, table))
+            thread_stop.wait(1)
+        logger.info("Dump progress monitor thread concluded")
+
+    def create_progress_table(self):
+        tablename = 'public.gpcrondump_progress'
+        conn = None
+        CREATE_PROGRESS_TABLE = """create table %s (segment int, schemaname varchar, tablename varchar);""" % tablename
+        try:
+            dburl = dbconn.DbURL(port=self.context.master_port, dbname=self.context.dump_database)
+            conn = dbconn.connect(dburl)
+            logger.info("before")
+            execSQL(conn, "drop table if exists %s" % tablename)
+            conn.commit()
+            logger.info("during")
+            execSQL(conn, CREATE_PROGRESS_TABLE)
+            conn.commit()
+            logger.info("after")
+        except Exception, e:
+            logger.exception("Unable to create %s in %s database" % (tablename, self.context.dump_database))
+            return
+        else:
+            logger.info("Created %s in %s database" % (tablename, self.context.dump_database))
+        finally:
+            if conn:
+                conn.close()
+
+    def cleanup_progress_table(self):
+        pass
+
     def execute(self):
         if bool(self.context.ddboost_hosts) or bool(self.context.ddboost_user):
             # check that both options are specified
@@ -753,11 +796,17 @@ class GpCronDump(Operation):
             if self.context.free_space_percent:
                 ValidateGpToolkit(self.context)
 
+            self.create_progress_table()
+            progress_thread_stop = threading.Event()
+            progress_thread = threading.Thread(target=self.progress_handler, args=(progress_thread_stop,))
+            progress_thread.start()
+            logger.info("Starting progress monitor thread")
+
             global conn
             conn = None
             try:
-                thread_stop = threading.Event()
-                lock_thread = threading.Thread(target=self.lock_handler, args=(self.context.timestamp, thread_stop))
+                lock_thread_stop = threading.Event()
+                lock_thread = threading.Thread(target=self.lock_handler, args=(self.context.timestamp, lock_thread_stop))
                 lock_thread.start()
 
                 LOCK_TABLE_SQL = "LOCK TABLE pg_catalog.pg_class IN EXCLUSIVE MODE;"
@@ -859,7 +908,7 @@ class GpCronDump(Operation):
                             backup_file_with_nbu(self.context, "partition_list")
 
             finally:
-                thread_stop.set()
+                lock_thread_stop.set()
                 try:
                     if lock_file_name and os.path.exists(lock_file_name):
                         os.remove(lock_file_name)
@@ -869,6 +918,9 @@ class GpCronDump(Operation):
                         conn = None
                 except Exception, e:
                     logger.debug("Failed to remove signal file or close connection, lock_handler thread probably already got to it.")
+
+            lock_thread_stop.set()
+            self.cleanup_progress_table()
 
             if self.context.history:
                 # This certainly does not belong under DumpDatabase, due to CLI assumptions. Note the use of options_list.
