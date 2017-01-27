@@ -663,21 +663,23 @@ class GpCronDump(Operation):
             logger.warn("Could not remove signal file %s, backup will proceed without releasing pg_class lock." % lock_file_name)
 
     def progress_handler(self, thread_stop):
-        logger.info("Beginning dump progress monitor thread")
         num_segs = len(get_all_segment_addresses(self.context.master_port)) # need a more efficient way to get segment count
-        check_query = "select * from (select count(segment) as segcount, schemaname, tablename from gpcrondump_progress group by (schemaname, tablename)) as subquery where segcount = %d;" % num_segs 
-        delete_query = "delete from public.gpcrondump_progress where schemaname = '%s' and tablename = '%s';"
+        check_query = "select * from (select count(segment) as segcount, schemaname, tablename from gpcrondump_progress group by (schemaname, tablename)) as subquery where segcount = %d order by schemaname, tablename;" % num_segs 
+        delete_query = "delete from public.gpcrondump_progress where %s; commit;"
+        delete_subquery = "(schemaname = '%s' and tablename = '%s') or "
         dburl = dbconn.DbURL(port=self.context.master_port, dbname=self.context.dump_database)
         conn = dbconn.connect(dburl)
         while not thread_stop.is_set():
             curs = execSQL(conn, check_query)
             results = curs.fetchall()
+            table_list = ""
             for row in results:
                 schema, table = row[1], row[2]
+                table_list += delete_subquery % (schema, table)
                 logger.info("Finished dumping table %s.%s" % (schema, table))
-                execSQL(conn, delete_query % (schema, table))
-            thread_stop.wait(1)
-        logger.info("Dump progress monitor thread concluded")
+            if table_list:
+                execSQL(conn, delete_query % table_list[:-4]) # [-4] to remove trailing " or " from table_list
+            thread_stop.wait(0.2)
 
     def create_progress_table(self):
         tablename = 'public.gpcrondump_progress'
@@ -686,13 +688,10 @@ class GpCronDump(Operation):
         try:
             dburl = dbconn.DbURL(port=self.context.master_port, dbname=self.context.dump_database)
             conn = dbconn.connect(dburl)
-            logger.info("before")
             execSQL(conn, "drop table if exists %s" % tablename)
             conn.commit()
-            logger.info("during")
             execSQL(conn, CREATE_PROGRESS_TABLE)
             conn.commit()
-            logger.info("after")
         except Exception, e:
             logger.exception("Unable to create %s in %s database" % (tablename, self.context.dump_database))
             return

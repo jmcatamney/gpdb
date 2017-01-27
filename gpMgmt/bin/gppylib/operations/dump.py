@@ -1106,6 +1106,9 @@ class ValidateExcludeTargets(Operation):
                             rebuild_excludes.append(dump_table)
                         else:
                             logger.warn("Schema dump request and exclude table %s in that schema, ignoring" % dump_table)
+                else:
+                    logger.info("Adding table %s to exclude list" % dump_table)
+                    rebuild_excludes.append(dump_table)
             else:
                 logger.warn("Exclude table %s does not exist in %s database, ignoring" % (dump_table, self.context.dump_database))
         if len(rebuild_excludes) == 0:
