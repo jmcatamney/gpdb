@@ -1603,7 +1603,7 @@ dumpTableData_copy(Archive *fout, void *dcontext)
 	/* Add an entry to the dump progress table to indicate this table has finished dumping on this segment */
 	if (g_dbID != 1) {
 		PQExpBuffer progressQry = createPQExpBuffer();
-		appendPQExpBuffer(progressQry, "INSERT INTO gpcrondump_progress VALUES (%d, '%s', '%s'); COMMIT;",
+		appendPQExpBuffer(progressQry, "INSERT INTO gp_toolkit.gpcrondump_progress VALUES (%d, '%s', '%s'); COMMIT;",
 										g_dbID, tbinfo->dobj.namespace->dobj.name, tbinfo->dobj.name);
 		PQexec(g_conn, progressQry->data);
 		destroyPQExpBuffer(progressQry);

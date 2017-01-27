@@ -598,7 +598,7 @@ def get_latest_full_dump_timestamp(context):
 
     raise Exception('No full backup found for incremental')
 
-def get_all_segment_addresses(master_port):
+def all_segment_addresses(master_port):
     gparray = GpArray.initFromCatalog(dbconn.DbURL(port=master_port), utility=True)
     addresses = [seg.getSegmentAddress() for seg in gparray.getDbList() if seg.isSegmentPrimary(current_role=True)]
     return list(set(addresses))

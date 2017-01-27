@@ -663,26 +663,37 @@ class GpCronDump(Operation):
             logger.warn("Could not remove signal file %s, backup will proceed without releasing pg_class lock." % lock_file_name)
 
     def progress_handler(self, thread_stop):
+        num_tables = len(get_user_table_list(self.context)) # need a more efficient way to get table count, also account for filtering
         num_segs = len(get_all_segment_addresses(self.context.master_port)) # need a more efficient way to get segment count
-        check_query = "select * from (select count(segment) as segcount, schemaname, tablename from gpcrondump_progress group by (schemaname, tablename)) as subquery where segcount = %d order by schemaname, tablename;" % num_segs 
-        delete_query = "delete from public.gpcrondump_progress where %s; commit;"
-        delete_subquery = "(schemaname = '%s' and tablename = '%s') or "
+        check_query = "select * from (select count(segment) as segcount, schemaname, tablename from gp_toolkit.gpcrondump_progress group by (schemaname, tablename)) as subquery where segcount = %d order by schemaname, tablename;" % num_segs 
+#        delete_query = "delete from gp_toolkit.gpcrondump_progress where %s; commit;"
+#        delete_subquery = "(schemaname = '%s' and tablename = '%s') or "
         dburl = dbconn.DbURL(port=self.context.master_port, dbname=self.context.dump_database)
-        conn = dbconn.connect(dburl)
+        table_count = 0
+        seen = []
         while not thread_stop.is_set():
-            curs = execSQL(conn, check_query)
-            results = curs.fetchall()
-            table_list = ""
+            try:
+                conn = dbconn.connect(dburl)
+                curs = execSQL(conn, check_query)
+                results = curs.fetchall()
+            except: # gp_toolkit.gpcrondump_progress has been dropped, exit this thread
+                conn.close()
+                return
+#            table_list = ""
             for row in results:
                 schema, table = row[1], row[2]
-                table_list += delete_subquery % (schema, table)
-                logger.info("Finished dumping table %s.%s" % (schema, table))
-            if table_list:
-                execSQL(conn, delete_query % table_list[:-4]) # [-4] to remove trailing " or " from table_list
-            thread_stop.wait(0.2)
+                if (schema, table) not in seen:
+#                    table_list += delete_subquery % (schema, table)
+                    table_count += 1
+                    logger.info("Finished dumping %s.%s (Table %d of %d)" % (schema, table, table_count, num_tables))
+                    seen.append((schema, table))
+#            if table_list:
+#                execSQL(conn, delete_query % table_list[:-4]) # [-4] to remove trailing " or " from table_list
+            #thread_stop.wait(0.2)
+            conn.close()
 
     def create_progress_table(self):
-        tablename = 'public.gpcrondump_progress'
+        tablename = 'gp_toolkit.gpcrondump_progress'
         conn = None
         CREATE_PROGRESS_TABLE = """create table %s (segment int, schemaname varchar, tablename varchar);""" % tablename
         try:
@@ -702,7 +713,20 @@ class GpCronDump(Operation):
                 conn.close()
 
     def cleanup_progress_table(self):
-        pass
+        tablename = 'gp_toolkit.gpcrondump_progress'
+        try:
+            dburl = dbconn.DbURL(port=self.context.master_port, dbname=self.context.dump_database)
+            conn = dbconn.connect(dburl)
+            execSQL(conn, "drop table if exists %s" % tablename)
+            conn.commit()
+        except Exception, e:
+            logger.exception("Unable to drop %s in %s database" % (tablename, self.context.dump_database))
+            return
+        else:
+            logger.info("Dropped %s in %s database" % (tablename, self.context.dump_database))
+        finally:
+            if conn:
+                conn.close()
 
     def execute(self):
         if bool(self.context.ddboost_hosts) or bool(self.context.ddboost_user):
@@ -918,7 +942,7 @@ class GpCronDump(Operation):
                 except Exception, e:
                     logger.debug("Failed to remove signal file or close connection, lock_handler thread probably already got to it.")
 
-            lock_thread_stop.set()
+            progress_thread_stop.set()
             self.cleanup_progress_table()
 
             if self.context.history:
