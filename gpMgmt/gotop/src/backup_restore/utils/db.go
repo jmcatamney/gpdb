@@ -41,17 +41,16 @@ func NewDBConn(dbname string) *DBConn {
 	}
 }
 
-func (dbconn *DBConn) Connect() error {
+func (dbconn *DBConn) Connect() {
 	connStr := fmt.Sprintf("user=%s dbname=%s host=%s port=%d sslmode=disable", dbconn.User, dbconn.DBName, dbconn.Host, dbconn.Port)
 	var err error
 	dbconn.Conn, err = sql.Open("postgres", connStr)
 	if dbconn.Conn == nil {
 		Abort("Cannot make connection to DB: %v", err)
 	}
-	if err != nil {
-		return err
-	}
-	return nil
+	utils.CheckError(err)
+	err = dbconn.Conn.Ping()
+	utils.CheckError(err)
 }
 
 func (dbconn *DBConn) GetRows(query string) ([][]interface{}, error) {

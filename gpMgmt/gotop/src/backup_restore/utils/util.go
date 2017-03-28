@@ -6,6 +6,11 @@ import (
 	"time"
 )
 
+var (
+	FPTimeNow = time.Now
+	FPOsGetenv = os.Getenv
+)
+
 // Pass in printf()-style message and interpolation args, then end the command appropriately
 func Abort(output ...interface{}) {
 	errStr := ""
@@ -24,7 +29,7 @@ func CheckError(err error) {
 }
 
 func CurrentTimestamp() string {
-	return time.Now().Format("20060102150405")
+	return FPTimeNow().Format("20060102150405")
 }
 
 func RecoverFromFailure() {
@@ -35,7 +40,7 @@ func RecoverFromFailure() {
 
 // If the environment variable is set, return that, else return the default
 func TryEnv(varname string, defval string) string {
-	val := os.Getenv(varname)
+	val := FPOsGetenv(varname)
 	if val == "" {
 		return defval
 	}

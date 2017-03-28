@@ -10,8 +10,7 @@ var connection *utils.DBConn
 
 func SetUp() {
 	connection = utils.NewDBConn("")
-	err := connection.Connect()
-	utils.CheckError(err)
+	connection.Connect()
 }
 
 func DoBackup() {
