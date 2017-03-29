@@ -14,10 +14,11 @@ var (
 // Pass in printf()-style message and interpolation args, then end the command appropriately
 func Abort(output ...interface{}) {
 	errStr := ""
-	if len(output) > 1 {
-		errStr = fmt.Sprintf(output[0].(string) + "\n", output[1:]...)
-	} else if len(output) == 1 {
-		errStr = fmt.Sprintf(output[0].(string) + "\n")
+	if len(output) > 0 {
+		errStr = fmt.Sprintf("%v\n", output[0])
+		if len(output) > 1 {
+			errStr = fmt.Sprintf(errStr, output[1:]...)
+		}
 	}
 	panic(errStr)
 }

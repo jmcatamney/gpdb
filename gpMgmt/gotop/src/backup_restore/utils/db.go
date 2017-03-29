@@ -48,9 +48,9 @@ func (dbconn *DBConn) Connect() {
 	if dbconn.Conn == nil {
 		Abort("Cannot make connection to DB: %v", err)
 	}
-	utils.CheckError(err)
+	CheckError(err)
 	err = dbconn.Conn.Ping()
-	utils.CheckError(err)
+	CheckError(err)
 }
 
 func (dbconn *DBConn) GetRows(query string) ([][]interface{}, error) {

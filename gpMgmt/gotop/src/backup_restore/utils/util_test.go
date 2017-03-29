@@ -14,8 +14,3 @@ func TestCurrentTimestamp(t *testing.T) {
 	actual := CurrentTimestamp()
 	Expect(actual).To(Equal(expected))
 }
-
-func TestGetRows(t *testing.T) {
-	RegisterTestingT(t)
-	connection = &DBConn{Conn: nil, User: "", DBName: "", Host: "", Port: 0}
-	connection.Conn.
