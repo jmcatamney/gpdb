@@ -1,7 +1,7 @@
 package backup_test
 
 import (
-	. "backup_restore/utils"
+//	. "backup_restore/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -11,13 +11,14 @@ import (
 	"testing"
 )
 
-var gpbackupPath = "./gpbackup"
+var gpbackupPath = ""
 
 // Helper function to execute gpbackup and return a session for stdout checking
 func gpbackup() *gexec.Session {
 	command := exec.Command(gpbackupPath)
 	session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 	Expect(err).ShouldNot(HaveOccurred())
+	<-session.Exited
 	return session
 }
 
@@ -38,18 +39,14 @@ var _ = Describe("Backup", func() {
 
 	It("Succeeds when PGDATABASE is set", func() {
 		session := gpbackup()
-		Eventually(session.Out).Should(gbytes.Say("The current time is"))
+		Expect(session.Out).Should(gbytes.Say("The current time is"))
 	})
 	It("Fails when PGDATABASE is unset", func() {
-		FPOsGetenv = func(varname string) (string) {
-			if varname == "PGDATABASE" {
-				return "nonexistent"
-			} else {
-				return os.Getenv(varname)
-			}
-		}
+		oldPgDatabase := os.Getenv("PGDATABASE")
+		os.Setenv("PGDATABASE", "")
+		defer os.Setenv("PGDATABASE", oldPgDatabase)
 
 		session := gpbackup()
-		Eventually(session.Out).Should(gbytes.Say("CRITICAL"))
+		Expect(session.Out).Should(gbytes.Say("CRITICAL"))
 	})
 })
