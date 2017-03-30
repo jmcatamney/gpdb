@@ -1,21 +1,26 @@
 package utils
 
 import (
-	"database/sql"
 	"fmt"
 	"os"
 	"os/user"
 	"strconv"
 
+	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
 
 type DBConn struct {
-	Conn   *sql.DB
+	Conn   *sqlx.DB
 	User   string
 	DBName string
 	Host   string
 	Port   int
+}
+
+type Table struct {
+	Schema string
+	Table  string
 }
 
 func NewDBConn(dbname string) *DBConn {
@@ -45,7 +50,7 @@ func NewDBConn(dbname string) *DBConn {
 func (dbconn *DBConn) Connect() {
 	connStr := fmt.Sprintf("user=%s dbname=%s host=%s port=%d sslmode=disable", dbconn.User, dbconn.DBName, dbconn.Host, dbconn.Port)
 	var err error
-	dbconn.Conn, err = sql.Open("postgres", connStr)
+	dbconn.Conn, err = sqlx.Connect("postgres", connStr)
 	if dbconn.Conn == nil {
 		Abort("Cannot make connection to DB: %v", err)
 	}
@@ -54,7 +59,11 @@ func (dbconn *DBConn) Connect() {
 	CheckError(err)
 }
 
-func (dbconn *DBConn) GetRows(query string) ([][]interface{}, error) {
+func (dbconn *DBConn) Select(dest interface{}, query string) error {
+	return dbconn.Conn.Select(dest, query)
+}
+
+/*func (dbconn *DBConn) GetRows(query string) ([][]interface{}, error) {
 	rows, err := dbconn.Conn.Query(query)
 	if err != nil {
 		return nil, err
@@ -85,4 +94,4 @@ func (dbconn *DBConn) GetRows(query string) ([][]interface{}, error) {
 		results = append(results, row)
 	}
 	return results, nil
-}
+}*/

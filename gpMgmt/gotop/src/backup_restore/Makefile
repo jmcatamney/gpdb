@@ -10,23 +10,26 @@ DEST = .
 GOFLAGS := -o $(DEST)
 
 dependencies :
-		go get github.com/onsi/ginkgo/ginkgo
-		go get golang.org/x/tools/cmd/goimports
+		go get github.com/jmoiron/sqlx
 		go get github.com/maxbrunsfeld/counterfeiter
+		go get github.com/onsi/ginkgo/ginkgo
 		go get github.com/onsi/gomega
+		go get golang.org/x/tools/cmd/goimports
 
 		go get
 
-format : dependencies
+format :
 		goimports -w .
 		go fmt .
 
-ginkgo : dependencies
+ginkgo :
 		ginkgo -r -randomizeSuites -randomizeAllSpecs 2>&1
 
 test : format ginkgo
 
 ci : ginkgo
 
-build :
+depend : dependencies
+
+build : format
 		go build $(GOFLAGS) -o $(MODULE_NAME)

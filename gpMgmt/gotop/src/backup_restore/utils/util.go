@@ -39,7 +39,6 @@ func RecoverFromFailure() {
 	}
 }
 
-// If the environment variable is set, return that, else return the default
 func TryEnv(varname string, defval string) string {
 	val := FPOsGetenv(varname)
 	if val == "" {
