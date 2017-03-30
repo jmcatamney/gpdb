@@ -3,18 +3,19 @@ package utils
 import (
 	"database/sql"
 	"fmt"
-	_ "github.com/lib/pq"
 	"os"
 	"os/user"
 	"strconv"
+
+	_ "github.com/lib/pq"
 )
 
 type DBConn struct {
-	Conn *sql.DB
-	User string
+	Conn   *sql.DB
+	User   string
 	DBName string
-	Host string
-	Port int
+	Host   string
+	Port   int
 }
 
 func NewDBConn(dbname string) *DBConn {
@@ -32,12 +33,12 @@ func NewDBConn(dbname string) *DBConn {
 	host = TryEnv("PGHOST", default_host)
 	port, _ = strconv.Atoi(TryEnv("PGPORT", "5432"))
 
-	return &DBConn {
-		Conn: nil,
-		User: username,
+	return &DBConn{
+		Conn:   nil,
+		User:   username,
 		DBName: dbname,
-		Host: host,
-		Port: port,
+		Host:   host,
+		Port:   port,
 	}
 }
 

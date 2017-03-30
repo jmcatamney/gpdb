@@ -1,14 +1,14 @@
 package backup_test
 
 import (
-//	. "backup_restore/utils"
+	"os"
+	"os/exec"
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
-	"os"
-	"os/exec"
-	"testing"
 )
 
 var gpbackupPath = ""

@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	FPTimeNow = time.Now
+	FPTimeNow  = time.Now
 	FPOsGetenv = os.Getenv
 )
 
