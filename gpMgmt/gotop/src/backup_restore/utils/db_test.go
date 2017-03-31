@@ -22,7 +22,7 @@ func TestDB(t *testing.T) {
 	RunSpecs(t, "db.go unit tests")
 }
 
-func createMockDB() (*sqlx.DB) {
+func createMockDB() *sqlx.DB {
 	var db *sql.DB
 	var err error
 	db, mock, err = sqlmock.New()
@@ -47,13 +47,13 @@ func shouldPanicWithMessage(message string) {
 var _ = Describe("utils/db tests", func() {
 	Describe("NewDBConn", func() {
 		Context("Database given with -dbname flag", func() {
-			It ("Should get the DBName from dbname argument", func() {
+			It("Should get the DBName from dbname argument", func() {
 				connection = utils.NewDBConn("testdb")
 				Expect(connection.DBName).To(Equal("testdb"))
 			})
 		})
 		Context("No database given with -dbname flag but PGDATABASE set", func() {
-			It ("Should get the DBName from PGDATABASE", func() {
+			It("Should get the DBName from PGDATABASE", func() {
 				oldPgDatabase := os.Getenv("PGDATABASE")
 				os.Setenv("PGDATABASE", "testdb")
 				defer os.Setenv("PGDATABASE", oldPgDatabase)
@@ -63,7 +63,7 @@ var _ = Describe("utils/db tests", func() {
 			})
 		})
 		Context("No database given with either -dbname or PGDATABASE", func() {
-			It ("Should fail", func() {
+			It("Should fail", func() {
 				oldPgDatabase := os.Getenv("PGDATABASE")
 				os.Setenv("PGDATABASE", "")
 				defer os.Setenv("PGDATABASE", oldPgDatabase)
@@ -75,7 +75,7 @@ var _ = Describe("utils/db tests", func() {
 	})
 	Describe("DBConn.Connect", func() {
 		Context("The database exists", func() {
-			It ("Should connect successfully", func() {
+			It("Should connect successfully", func() {
 				driver := utils.TestDriver{DBExists: true, DB: createMockDB()}
 				connection = utils.NewDBConn("testdb")
 				connection.Driver = driver
@@ -84,7 +84,7 @@ var _ = Describe("utils/db tests", func() {
 			})
 		})
 		Context("The database does not exist", func() {
-			It ("Should fail", func() {
+			It("Should fail", func() {
 				driver := utils.TestDriver{DBExists: false, DB: createMockDB(), DBName: "testdb"}
 				connection = utils.NewDBConn("testdb")
 				connection.Driver = driver
@@ -95,7 +95,7 @@ var _ = Describe("utils/db tests", func() {
 		})
 	})
 	Describe("DBConn.Select", func() {
-		It ("Should be able to SELECT into an anonymous struct", func() {
+		It("Should be able to SELECT into an anonymous struct", func() {
 			driver := utils.TestDriver{DBExists: true, DB: createMockDB(), DBName: "testdb"}
 			connection = utils.NewDBConn("testdb")
 			connection.Driver = driver
@@ -107,8 +107,8 @@ var _ = Describe("utils/db tests", func() {
 			mock.ExpectQuery("SELECT (.*)").WillReturnRows(two_col_rows)
 
 			testSlice := make([]struct {
-				Schemaname string;
-				Tablename string
+				Schemaname string
+				Tablename  string
 			}, 0)
 
 			err := connection.Select(&testSlice, "SELECT schemaname, tablename FROM two_columns ORDER BY schemaname LIMIT 2")

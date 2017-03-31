@@ -3,6 +3,7 @@ package utils
 import (
 	"errors"
 	"fmt"
+
 	"github.com/jmoiron/sqlx"
 )
 
@@ -15,8 +16,8 @@ type GPDBDriver struct {
 
 type TestDriver struct {
 	DBExists bool
-	DB *sqlx.DB
-	DBName string
+	DB       *sqlx.DB
+	DBName   string
 }
 
 func (driver GPDBDriver) Connect(driverName string, dataSourceName string) (*sqlx.DB, error) {

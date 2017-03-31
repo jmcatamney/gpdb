@@ -22,15 +22,22 @@ func DoSetup() {
 func DoBackup() {
 	fmt.Println("The current time is", utils.CurrentTimestamp())
 
-	pgTablesArray := make([]struct {
-		Schemaname string;
-		Tablename string
+	fooArray := make([]struct {
+		I int
 	}, 0)
-	err := connection.Select(&pgTablesArray, "SELECT schemaname,tablename FROM pg_tables ORDER BY schemaname, tablename")
+
+	connection.Begin()
+
+	err := connection.Exec("SELECT pg_sleep(2)")
 	utils.CheckError(err)
-	for _, datum := range pgTablesArray {
-		fmt.Printf("%s.%s\n", datum.Schemaname, datum.Tablename)
+
+	err = connection.Select(&fooArray, "SELECT * FROM foo ORDER BY i")
+	utils.CheckError(err)
+	for _, datum := range fooArray {
+		fmt.Printf("%d\n", datum.I)
 	}
+
+	connection.Commit()
 }
 
 func DoTeardown() {

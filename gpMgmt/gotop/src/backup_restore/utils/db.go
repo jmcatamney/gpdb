@@ -18,6 +18,7 @@ type DBConn struct {
 	DBName string
 	Host   string
 	Port   int
+	Tx     *sqlx.Tx
 }
 
 type Table struct {
@@ -49,7 +50,37 @@ func NewDBConn(dbname string) *DBConn {
 		DBName: dbname,
 		Host:   host,
 		Port:   port,
+		Tx:     nil,
 	}
+}
+
+func (dbconn *DBConn) Begin() {
+	if dbconn.Tx != nil {
+		Abort("Cannot begin transation; there is already a transaction in progress")
+	}
+	var err error
+	//txOpts := sql.TxOptions{Isolation:sql.LevelSerializable}
+	//dbconn.Tx, err = dbconn.Conn.BeginTxx(context.Background(), &txOpts)
+	dbconn.Tx, err = dbconn.Conn.Beginx()
+	CheckError(err)
+	err = dbconn.Exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+	CheckError(err)
+}
+
+func (dbconn *DBConn) Close() {
+	if dbconn.Conn != nil {
+		dbconn.Conn.Close()
+	}
+}
+
+func (dbconn *DBConn) Commit() {
+	if dbconn.Tx == nil {
+		Abort("Cannot commit transation; there is no transaction in progress")
+	}
+	var err error
+	err = dbconn.Tx.Commit()
+	CheckError(err)
+	dbconn.Tx = nil
 }
 
 func (dbconn *DBConn) Connect() {
@@ -62,12 +93,18 @@ func (dbconn *DBConn) Connect() {
 	CheckError(err)
 }
 
-func (dbconn *DBConn) Select(dest interface{}, query string) error {
-	return dbconn.Conn.Select(dest, query)
+func (dbconn *DBConn) Exec(query string) error {
+	if dbconn.Tx != nil {
+		_, err := dbconn.Tx.Exec(query)
+		return err
+	}
+	_, err := dbconn.Conn.Exec(query)
+	return err
 }
 
-func (dbconn *DBConn) Close() {
-	if dbconn.Conn != nil {
-		dbconn.Conn.Close()
+func (dbconn *DBConn) Select(dest interface{}, query string) error {
+	if dbconn.Tx != nil {
+		return dbconn.Tx.Select(dest, query)
 	}
+	return dbconn.Conn.Select(dest, query)
 }

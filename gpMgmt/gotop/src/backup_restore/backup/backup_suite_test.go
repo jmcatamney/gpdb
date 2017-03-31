@@ -1,8 +1,8 @@
 package backup_test
 
 import (
+	"backup_restore/utils"
 	"fmt"
-	"os"
 	"os/exec"
 	"testing"
 
@@ -16,7 +16,7 @@ var gpbackupPath = ""
 
 // Helper function to execute gpbackup and return a session for stdout checking
 func gpbackup() *gexec.Session {
-	command := exec.Command(gpbackupPath)
+	command := exec.Command(gpbackupPath, "-dbname", "testdb")
 	session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 	Expect(err).ShouldNot(HaveOccurred())
 	<-session.Exited
@@ -28,7 +28,7 @@ func TestBackup(t *testing.T) {
 	RunSpecs(t, "gpbackup integration tests")
 }
 
-var _ = Describe("environment tests", func() {
+var _ = Describe("backup integration tests", func() {
 	BeforeSuite(func() {
 		var err error
 		gpbackupPath, err = gexec.Build("backup_restore")
@@ -44,20 +44,20 @@ var _ = Describe("environment tests", func() {
 		exec.Command("dropdb", "testdb").Run()
 	})
 
-	It("Succeeds when PGDATABASE is set", func() {
-		oldPgDatabase := os.Getenv("PGDATABASE")
-		os.Setenv("PGDATABASE", "testdb")
-		defer os.Setenv("PGDATABASE", oldPgDatabase)
-
-		session := gpbackup()
-		Expect(session.Out).Should(gbytes.Say("The current time is"))
-	})
-	It("Fails when PGDATABASE is unset", func() {
-		oldPgDatabase := os.Getenv("PGDATABASE")
-		os.Setenv("PGDATABASE", "")
-		defer os.Setenv("PGDATABASE", oldPgDatabase)
-
-		session := gpbackup()
-		Expect(session.Out).Should(gbytes.Say("CRITICAL"))
+	Describe("transactionality tests", func() {
+		Context("gpbackup runs its queries in a transaction", func () {
+			It("Does not see records added during the transaction", func() {
+				interference := utils.NewDBConn("testdb")
+				interference.Connect()
+				interference.Exec("CREATE TABLE foo(i int)")
+				interference.Exec("INSERT INTO foo SELECT generate_series(1,10)")
+				go func() {
+					interference.Exec("SELECT pg_sleep(2); INSERT INTO foo SELECT generate_series(11,20)")
+				}()
+				session := gpbackup()
+				Eventually(session.Out).Should(gbytes.Say("10"))
+				Eventually(session.Out).ShouldNot(gbytes.Say("20"))
+			})
+		})
 	})
 })
