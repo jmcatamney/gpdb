@@ -24,10 +24,10 @@ func gpbackup() *gexec.Session {
 
 func TestBackup(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Backup Suite")
+	RunSpecs(t, "gpbackup integration tests")
 }
 
-var _ = Describe("Backup", func() {
+var _ = Describe("environment tests", func() {
 	BeforeSuite(func() {
 		var err error
 		gpbackupPath, err = gexec.Build("backup_restore")

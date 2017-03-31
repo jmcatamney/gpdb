@@ -26,7 +26,7 @@ format :
 ginkgo :
 		ginkgo -r -randomizeSuites -randomizeAllSpecs 2>&1
 
-test : format ginkgo
+test : ginkgo
 
 ci : ginkgo
 
