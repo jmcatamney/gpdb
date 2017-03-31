@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-var Connection *utils.DBConn
+var connection *utils.DBConn
 
 var dbname = flag.String("dbname", "", "The database to be backed up")
 
@@ -15,8 +15,8 @@ func DoValidation() {
 }
 
 func DoSetup() {
-	Connection = utils.NewDBConn(*dbname)
-	Connection.Connect()
+	connection = utils.NewDBConn(*dbname)
+	connection.Connect()
 }
 
 func DoBackup() {
@@ -26,7 +26,7 @@ func DoBackup() {
 		Schemaname string;
 		Tablename string
 	}, 0)
-	err := Connection.Select(&pgTablesArray, "SELECT schemaname,tablename FROM pg_tables ORDER BY schemaname, tablename")
+	err := connection.Select(&pgTablesArray, "SELECT schemaname,tablename FROM pg_tables ORDER BY schemaname, tablename")
 	utils.CheckError(err)
 	for _, datum := range pgTablesArray {
 		fmt.Printf("%s.%s\n", datum.Schemaname, datum.Tablename)
@@ -34,7 +34,8 @@ func DoBackup() {
 }
 
 func DoTeardown() {
-	if Connection != nil {
-		Connection.Close()
+	if connection != nil {
+		connection.Close()
 	}
+	// TODO: Add logic for error codes based on whether we Abort()ed or not
 }
