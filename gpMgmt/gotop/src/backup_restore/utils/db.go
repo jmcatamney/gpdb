@@ -65,3 +65,9 @@ func (dbconn *DBConn) Connect() {
 func (dbconn *DBConn) Select(dest interface{}, query string) error {
 	return dbconn.Conn.Select(dest, query)
 }
+
+func (dbconn *DBConn) Close() {
+	if dbconn.Conn != nil {
+		dbconn.Conn.Close()
+	}
+}

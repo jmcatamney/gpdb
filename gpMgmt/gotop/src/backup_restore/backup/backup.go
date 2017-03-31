@@ -4,7 +4,6 @@ import (
 	"backup_restore/utils"
 	"flag"
 	"fmt"
-	"os"
 )
 
 var Connection *utils.DBConn
@@ -35,6 +34,7 @@ func DoBackup() {
 }
 
 func DoTeardown() {
-	//Connection.Conn.Close()
-	os.Exit(0)
+	if Connection != nil {
+		Connection.Close()
+	}
 }
