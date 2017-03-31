@@ -32,5 +32,5 @@ ci : ginkgo
 
 depend : dependencies
 
-build : format
+build : 
 		go build $(GOFLAGS) -o $(MODULE_NAME)

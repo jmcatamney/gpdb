@@ -1,6 +1,7 @@
 package backup_test
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"testing"
@@ -32,12 +33,22 @@ var _ = Describe("environment tests", func() {
 		var err error
 		gpbackupPath, err = gexec.Build("backup_restore")
 		Expect(err).ShouldNot(HaveOccurred())
+		exec.Command("dropdb", "testdb").Run()
+		err = exec.Command("createdb", "testdb").Run()
+		if err != nil {
+			Fail(fmt.Sprintf("%v", err))
+		}
 	})
 	AfterSuite(func() {
 		gexec.CleanupBuildArtifacts()
+		exec.Command("dropdb", "testdb").Run()
 	})
 
 	It("Succeeds when PGDATABASE is set", func() {
+		oldPgDatabase := os.Getenv("PGDATABASE")
+		os.Setenv("PGDATABASE", "testdb")
+		defer os.Setenv("PGDATABASE", oldPgDatabase)
+
 		session := gpbackup()
 		Expect(session.Out).Should(gbytes.Say("The current time is"))
 	})

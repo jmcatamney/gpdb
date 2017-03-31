@@ -6,8 +6,9 @@ import (
 )
 
 func main() {
-	defer TearDown()
+	defer DoTeardown()
 	defer utils.RecoverFromFailure()
-	SetUp()
+	DoValidation()
+	DoSetup()
 	DoBackup()
 }

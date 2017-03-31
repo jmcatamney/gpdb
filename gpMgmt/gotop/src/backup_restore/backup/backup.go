@@ -2,15 +2,23 @@ package backup
 
 import (
 	"backup_restore/utils"
+	"flag"
 	"fmt"
 	"os"
 )
 
-var connection *utils.DBConn
+var Connection *utils.DBConn
 
-func SetUp() {
-	connection = utils.NewDBConn("")
-	connection.Connect()
+var dbname = flag.String("dbname", "", "The database to be backed up")
+
+func DoValidation() {
+	flag.Parse()
+}
+
+func DoSetup() {
+	fmt.Println("Using database", *dbname)
+	Connection = utils.NewDBConn(*dbname)
+	Connection.Connect()
 }
 
 func DoBackup() {
@@ -20,23 +28,23 @@ func DoBackup() {
 	}, 0)
 
 	pgTablesArray := make([]struct {
-		Schemaname string
-		Tablename  string
+		Schemaname string;
+		Tablename string
 	}, 0)
-	err := connection.Select(&pgTablesArray, "select schemaname,tablename from pg_tables limit 2")
+	err := Connection.Select(&pgTablesArray, "select schemaname,tablename from pg_tables limit 2")
 	utils.CheckError(err)
 	for i, datum := range pgTablesArray {
 		fmt.Printf("%d: The schema for table %s is %s\n", i, datum.Schemaname, datum.Tablename)
 	}
 
-	err = connection.Select(&barArray, "select * from bar")
+	err = Connection.Select(&barArray, "select * from bar")
 	utils.CheckError(err)
 	for _, datum := range barArray {
 		fmt.Printf("Item: %d\n", datum.J)
 	}
 }
 
-func TearDown() {
-	fmt.Println("Got to tearDown")
+func DoTeardown() {
+	//Connection.Conn.Close()
 	os.Exit(0)
 }
