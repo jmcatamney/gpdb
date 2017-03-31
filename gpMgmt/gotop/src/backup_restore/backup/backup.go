@@ -20,8 +20,8 @@ func DoBackup() {
 	}, 0)
 
 	pgTablesArray := make([]struct {
-		Schemaname string;
-		Tablename string
+		Schemaname string
+		Tablename  string
 	}, 0)
 	err := connection.Select(&pgTablesArray, "select schemaname,tablename from pg_tables limit 2")
 	utils.CheckError(err)

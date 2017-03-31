@@ -15,6 +15,7 @@ dependencies :
 		go get github.com/onsi/ginkgo/ginkgo
 		go get github.com/onsi/gomega
 		go get golang.org/x/tools/cmd/goimports
+		go get gopkg.in/DATA-DOG/go-sqlmock.v1
 
 		go get
 
