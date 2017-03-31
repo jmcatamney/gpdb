@@ -16,31 +16,21 @@ func DoValidation() {
 }
 
 func DoSetup() {
-	fmt.Println("Using database", *dbname)
 	Connection = utils.NewDBConn(*dbname)
 	Connection.Connect()
 }
 
 func DoBackup() {
 	fmt.Println("The current time is", utils.CurrentTimestamp())
-	barArray := make([]struct {
-		J int
-	}, 0)
 
 	pgTablesArray := make([]struct {
 		Schemaname string;
 		Tablename string
 	}, 0)
-	err := Connection.Select(&pgTablesArray, "select schemaname,tablename from pg_tables limit 2")
+	err := Connection.Select(&pgTablesArray, "SELECT schemaname,tablename FROM pg_tables ORDER BY schemaname, tablename")
 	utils.CheckError(err)
-	for i, datum := range pgTablesArray {
-		fmt.Printf("%d: The schema for table %s is %s\n", i, datum.Schemaname, datum.Tablename)
-	}
-
-	err = Connection.Select(&barArray, "select * from bar")
-	utils.CheckError(err)
-	for _, datum := range barArray {
-		fmt.Printf("Item: %d\n", datum.J)
+	for _, datum := range pgTablesArray {
+		fmt.Printf("%s.%s\n", datum.Schemaname, datum.Tablename)
 	}
 }
 
