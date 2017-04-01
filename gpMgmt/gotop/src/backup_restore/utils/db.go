@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 	"os/user"
@@ -59,11 +60,9 @@ func (dbconn *DBConn) Begin() {
 		Abort("Cannot begin transation; there is already a transaction in progress")
 	}
 	var err error
-	//txOpts := sql.TxOptions{Isolation:sql.LevelSerializable}
-	//dbconn.Tx, err = dbconn.Conn.BeginTxx(context.Background(), &txOpts)
 	dbconn.Tx, err = dbconn.Conn.Beginx()
 	CheckError(err)
-	err = dbconn.Exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+	_, err = dbconn.Exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
 	CheckError(err)
 }
 
@@ -93,13 +92,26 @@ func (dbconn *DBConn) Connect() {
 	CheckError(err)
 }
 
-func (dbconn *DBConn) Exec(query string) error {
+func (dbconn *DBConn) Exec(query string) (sql.Result, error) {
 	if dbconn.Tx != nil {
-		_, err := dbconn.Tx.Exec(query)
-		return err
+		return dbconn.Tx.Exec(query)
 	}
-	_, err := dbconn.Conn.Exec(query)
-	return err
+	return dbconn.Conn.Exec(query)
+}
+
+func (dbconn *DBConn) Get(dest interface{}, query string) error {
+	if dbconn.Tx != nil {
+		return dbconn.Tx.Get(dest, query)
+	}
+	return dbconn.Conn.Get(dest, query)
+}
+
+func (dbconn *DBConn) GetDBSize() string {
+	size := struct{DBSize string}{}
+	sizeQuery := fmt.Sprintf("SELECT pg_size_pretty(sodddatsize) as dbsize FROM gp_toolkit.gp_size_of_database WHERE sodddatname='%s'", dbconn.DBName)
+	err := dbconn.Get(&size, sizeQuery)
+	CheckError(err)
+	return size.DBSize
 }
 
 func (dbconn *DBConn) Select(dest interface{}, query string) error {

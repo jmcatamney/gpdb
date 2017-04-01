@@ -33,6 +33,19 @@ func createMockDB() *sqlx.DB {
 	return mockdb
 }
 
+func expectBegin() {
+	fakeResult := utils.TestResult{Rows: 0}
+	mock.ExpectBegin()
+	mock.ExpectExec("SET TRANSACTION(.*)").WillReturnResult(fakeResult)
+}
+
+func createAndConnectMockDB() {
+	driver := utils.TestDriver{DBExists: true, DB: createMockDB(), DBName: "testdb"}
+	connection = utils.NewDBConn("testdb")
+	connection.Driver = driver
+	connection.Connect()
+}
+
 func shouldPanicWithMessage(message string) {
 	if r := recover(); r != nil {
 		errMsg := strings.TrimSpace(fmt.Sprintf("%v", r))
@@ -94,13 +107,74 @@ var _ = Describe("utils/db tests", func() {
 			})
 		})
 	})
-	Describe("DBConn.Select", func() {
-		It("Should be able to SELECT into an anonymous struct", func() {
-			driver := utils.TestDriver{DBExists: true, DB: createMockDB(), DBName: "testdb"}
-			connection = utils.NewDBConn("testdb")
-			connection.Driver = driver
-			connection.Connect()
+	Describe("DBConn.Exec", func() {
+		It("Should be able to INSERT outside of a transaction", func() {
+			createAndConnectMockDB()
+			fakeResult := utils.TestResult{Rows: 1}
+			mock.ExpectExec("INSERT (.*)").WillReturnResult(fakeResult)
 
+			res, err := connection.Exec("INSERT INTO pg_tables VALUES ('schema', 'table')")
+			Expect(err).ToNot(HaveOccurred())
+			rowsReturned, err := res.RowsAffected()
+			Expect(rowsReturned).To(Equal(int64(1)))
+		})
+		It("Should be able to INSERT in a transaction", func() {
+			createAndConnectMockDB()
+			fakeResult := utils.TestResult{Rows: 1}
+			expectBegin()
+			mock.ExpectExec("INSERT (.*)").WillReturnResult(fakeResult)
+			mock.ExpectCommit()
+
+			connection.Begin()
+			res, err := connection.Exec("INSERT INTO pg_tables VALUES ('schema', 'table')")
+			connection.Commit()
+			Expect(err).ToNot(HaveOccurred())
+			rowsReturned, err := res.RowsAffected()
+			Expect(rowsReturned).To(Equal(int64(1)))
+		})
+	})
+	Describe("DBConn.Get", func() {
+		It("Should be able to GET outside of a transaction", func() {
+			createAndConnectMockDB()
+			two_col_single_row := sqlmock.NewRows([]string{"schemaname", "tablename"}).
+				AddRow("schema1", "table1")
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(two_col_single_row)
+
+			testRecord := struct {
+				Schemaname string
+				Tablename  string
+			}{}
+
+			err := connection.Get(&testRecord, "SELECT schemaname, tablename FROM two_columns ORDER BY schemaname")
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(testRecord.Schemaname).To(Equal("schema1"))
+			Expect(testRecord.Tablename).To(Equal("table1"))
+		})
+		It("Should be able to GET in a transaction", func() {
+			createAndConnectMockDB()
+			two_col_single_row := sqlmock.NewRows([]string{"schemaname", "tablename"}).
+				AddRow("schema1", "table1")
+			expectBegin()
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(two_col_single_row)
+			mock.ExpectCommit()
+
+			testRecord := struct {
+				Schemaname string
+				Tablename  string
+			}{}
+
+			connection.Begin()
+			err := connection.Get(&testRecord, "SELECT schemaname, tablename FROM two_columns ORDER BY schemaname")
+			connection.Commit()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(testRecord.Schemaname).To(Equal("schema1"))
+			Expect(testRecord.Tablename).To(Equal("table1"))
+		})
+	})
+	Describe("DBConn.Select", func() {
+		It("Should be able to SELECT outside of a transaction", func() {
+			createAndConnectMockDB()
 			two_col_rows := sqlmock.NewRows([]string{"schemaname", "tablename"}).
 				AddRow("schema1", "table1").
 				AddRow("schema2", "table2")
@@ -112,6 +186,31 @@ var _ = Describe("utils/db tests", func() {
 			}, 0)
 
 			err := connection.Select(&testSlice, "SELECT schemaname, tablename FROM two_columns ORDER BY schemaname LIMIT 2")
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(testSlice)).To(Equal(2))
+			Expect(testSlice[0].Schemaname).To(Equal("schema1"))
+			Expect(testSlice[0].Tablename).To(Equal("table1"))
+			Expect(testSlice[1].Schemaname).To(Equal("schema2"))
+			Expect(testSlice[1].Tablename).To(Equal("table2"))
+		})
+		It("Should be able to SELECT in a transaction", func() {
+			createAndConnectMockDB()
+			two_col_rows := sqlmock.NewRows([]string{"schemaname", "tablename"}).
+				AddRow("schema1", "table1").
+				AddRow("schema2", "table2")
+			expectBegin()
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(two_col_rows)
+			mock.ExpectCommit()
+
+			testSlice := make([]struct {
+				Schemaname string
+				Tablename  string
+			}, 0)
+
+			connection.Begin()
+			err := connection.Select(&testSlice, "SELECT schemaname, tablename FROM two_columns ORDER BY schemaname LIMIT 2")
+			connection.Commit()
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(testSlice)).To(Equal(2))

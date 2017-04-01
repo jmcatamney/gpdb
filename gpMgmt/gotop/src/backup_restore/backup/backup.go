@@ -21,6 +21,7 @@ func DoSetup() {
 
 func DoBackup() {
 	fmt.Println("The current time is", utils.CurrentTimestamp())
+	fmt.Printf("Database %s is %s\n", connection.DBName, connection.GetDBSize())
 
 	fooArray := make([]struct {
 		I int
@@ -28,7 +29,7 @@ func DoBackup() {
 
 	connection.Begin()
 
-	err := connection.Exec("SELECT pg_sleep(2)")
+	_, err := connection.Exec("SELECT pg_sleep(2)")
 	utils.CheckError(err)
 
 	err = connection.Select(&fooArray, "SELECT * FROM foo ORDER BY i")

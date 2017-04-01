@@ -20,6 +20,10 @@ type TestDriver struct {
 	DBName   string
 }
 
+type TestResult struct {
+	Rows int64
+}
+
 func (driver GPDBDriver) Connect(driverName string, dataSourceName string) (*sqlx.DB, error) {
 	return sqlx.Connect(driverName, dataSourceName)
 }
@@ -30,4 +34,12 @@ func (driver TestDriver) Connect(driverName string, dataSourceName string) (*sql
 	} else {
 		return nil, errors.New(fmt.Sprintf("Database %s does not exist", driver.DBName))
 	}
+}
+
+func (res TestResult) LastInsertId() (int64, error) {
+	return 0, nil
+}
+
+func (res TestResult) RowsAffected() (int64, error) {
+	return res.Rows, nil
 }

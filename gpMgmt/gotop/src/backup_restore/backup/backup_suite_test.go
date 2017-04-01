@@ -52,7 +52,7 @@ var _ = Describe("backup integration tests", func() {
 				interference.Exec("CREATE TABLE foo(i int)")
 				interference.Exec("INSERT INTO foo SELECT generate_series(1,100)")
 				go func() {
-					interference.Exec("SELECT pg_sleep(2); INSERT INTO foo SELECT generate_series(101,200)")
+					interference.Exec("SELECT pg_sleep(1); INSERT INTO foo SELECT generate_series(101,200)")
 				}()
 				session := gpbackup()
 				Eventually(session.Out).Should(gbytes.Say("100"))
