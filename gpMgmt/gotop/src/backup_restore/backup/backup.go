@@ -4,6 +4,7 @@ import (
 	"backup_restore/utils"
 	"flag"
 	"fmt"
+	"os"
 )
 
 var connection *utils.DBConn
@@ -23,19 +24,16 @@ func DoBackup() {
 	fmt.Println("The current time is", utils.CurrentTimestamp())
 	fmt.Printf("Database %s is %s\n", connection.DBName, connection.GetDBSize())
 
-	fooArray := make([]struct {
-		I int
-	}, 0)
-
 	connection.Begin()
 
-	_, err := connection.Exec("SELECT pg_sleep(2)")
+	tablenames := make([]struct {
+		Tablename string
+	}, 0)
+	err := connection.Select(&tablenames, "SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
 	utils.CheckError(err)
-
-	err = connection.Select(&fooArray, "SELECT * FROM foo ORDER BY i")
-	utils.CheckError(err)
-	for _, datum := range fooArray {
-		fmt.Printf("%d\n", datum.I)
+	for _, table := range tablenames {
+		attArray := GetTableAtts(connection, table.Tablename)
+		PrintCreateTable(os.Stdout, table.Tablename, attArray) // TODO: Change to write to file
 	}
 
 	connection.Commit()

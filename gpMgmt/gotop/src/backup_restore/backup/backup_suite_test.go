@@ -1,14 +1,14 @@
 package backup_test
 
 import (
-	"backup_restore/utils"
-	"fmt"
+	//"backup_restore/utils"
+	//"fmt"
 	"os/exec"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
+	//"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 )
 
@@ -29,7 +29,7 @@ func TestBackup(t *testing.T) {
 }
 
 var _ = Describe("backup integration tests", func() {
-	BeforeSuite(func() {
+/*	BeforeSuite(func() {
 		var err error
 		gpbackupPath, err = gexec.Build("backup_restore")
 		Expect(err).ShouldNot(HaveOccurred())
@@ -59,5 +59,5 @@ var _ = Describe("backup integration tests", func() {
 				Eventually(session.Out).ShouldNot(gbytes.Say("200"))
 			})
 		})
-	})
+	})*/
 })

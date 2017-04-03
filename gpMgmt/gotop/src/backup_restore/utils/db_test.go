@@ -2,10 +2,8 @@ package utils_test
 
 import (
 	"backup_restore/utils"
-	"database/sql"
-	"fmt"
+	"backup_restore/testutils"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/jmoiron/sqlx"
@@ -20,41 +18,6 @@ var mock sqlmock.Sqlmock
 func TestDB(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "db.go unit tests")
-}
-
-func createMockDB() *sqlx.DB {
-	var db *sql.DB
-	var err error
-	db, mock, err = sqlmock.New()
-	mockdb := sqlx.NewDb(db, "sqlmock")
-	if err != nil {
-		Fail("Could not create mock database connection")
-	}
-	return mockdb
-}
-
-func expectBegin() {
-	fakeResult := utils.TestResult{Rows: 0}
-	mock.ExpectBegin()
-	mock.ExpectExec("SET TRANSACTION(.*)").WillReturnResult(fakeResult)
-}
-
-func createAndConnectMockDB() {
-	driver := utils.TestDriver{DBExists: true, DB: createMockDB(), DBName: "testdb"}
-	connection = utils.NewDBConn("testdb")
-	connection.Driver = driver
-	connection.Connect()
-}
-
-func shouldPanicWithMessage(message string) {
-	if r := recover(); r != nil {
-		errMsg := strings.TrimSpace(fmt.Sprintf("%v", r))
-		if errMsg != message {
-			Fail(fmt.Sprintf("Expected panic message '%s', got '%s'", message, errMsg))
-		}
-	} else {
-		Fail("Function did not panic as expected")
-	}
 }
 
 var _ = Describe("utils/db tests", func() {
@@ -81,7 +44,7 @@ var _ = Describe("utils/db tests", func() {
 				os.Setenv("PGDATABASE", "")
 				defer os.Setenv("PGDATABASE", oldPgDatabase)
 
-				defer shouldPanicWithMessage("No database provided and PGDATABASE not set")
+				defer testutils.ShouldPanicWithMessage("No database provided and PGDATABASE not set")
 				connection = utils.NewDBConn("")
 			})
 		})
@@ -89,7 +52,9 @@ var _ = Describe("utils/db tests", func() {
 	Describe("DBConn.Connect", func() {
 		Context("The database exists", func() {
 			It("Should connect successfully", func() {
-				driver := utils.TestDriver{DBExists: true, DB: createMockDB()}
+				var mockdb *sqlx.DB
+				mockdb, mock = testutils.CreateMockDB()
+				driver := utils.TestDriver{DBExists: true, DB: mockdb}
 				connection = utils.NewDBConn("testdb")
 				connection.Driver = driver
 				Expect(connection.DBName).To(Equal("testdb"))
@@ -98,18 +63,20 @@ var _ = Describe("utils/db tests", func() {
 		})
 		Context("The database does not exist", func() {
 			It("Should fail", func() {
-				driver := utils.TestDriver{DBExists: false, DB: createMockDB(), DBName: "testdb"}
+				var mockdb *sqlx.DB
+				mockdb, mock = testutils.CreateMockDB()
+				driver := utils.TestDriver{DBExists: false, DB: mockdb, DBName: "testdb"}
 				connection = utils.NewDBConn("testdb")
 				connection.Driver = driver
 				Expect(connection.DBName).To(Equal("testdb"))
-				defer shouldPanicWithMessage("Database testdb does not exist, exiting")
+				defer testutils.ShouldPanicWithMessage("Database testdb does not exist, exiting")
 				connection.Connect()
 			})
 		})
 	})
 	Describe("DBConn.Exec", func() {
 		It("Should be able to INSERT outside of a transaction", func() {
-			createAndConnectMockDB()
+			connection, mock = testutils.CreateAndConnectMockDB()
 			fakeResult := utils.TestResult{Rows: 1}
 			mock.ExpectExec("INSERT (.*)").WillReturnResult(fakeResult)
 
@@ -119,9 +86,9 @@ var _ = Describe("utils/db tests", func() {
 			Expect(rowsReturned).To(Equal(int64(1)))
 		})
 		It("Should be able to INSERT in a transaction", func() {
-			createAndConnectMockDB()
+			connection, mock = testutils.CreateAndConnectMockDB()
 			fakeResult := utils.TestResult{Rows: 1}
-			expectBegin()
+			testutils.ExpectBegin(mock)
 			mock.ExpectExec("INSERT (.*)").WillReturnResult(fakeResult)
 			mock.ExpectCommit()
 
@@ -135,7 +102,7 @@ var _ = Describe("utils/db tests", func() {
 	})
 	Describe("DBConn.Get", func() {
 		It("Should be able to GET outside of a transaction", func() {
-			createAndConnectMockDB()
+			connection, mock = testutils.CreateAndConnectMockDB()
 			two_col_single_row := sqlmock.NewRows([]string{"schemaname", "tablename"}).
 				AddRow("schema1", "table1")
 			mock.ExpectQuery("SELECT (.*)").WillReturnRows(two_col_single_row)
@@ -152,10 +119,10 @@ var _ = Describe("utils/db tests", func() {
 			Expect(testRecord.Tablename).To(Equal("table1"))
 		})
 		It("Should be able to GET in a transaction", func() {
-			createAndConnectMockDB()
+			connection, mock = testutils.CreateAndConnectMockDB()
 			two_col_single_row := sqlmock.NewRows([]string{"schemaname", "tablename"}).
 				AddRow("schema1", "table1")
-			expectBegin()
+			testutils.ExpectBegin(mock)
 			mock.ExpectQuery("SELECT (.*)").WillReturnRows(two_col_single_row)
 			mock.ExpectCommit()
 
@@ -174,7 +141,7 @@ var _ = Describe("utils/db tests", func() {
 	})
 	Describe("DBConn.Select", func() {
 		It("Should be able to SELECT outside of a transaction", func() {
-			createAndConnectMockDB()
+			connection, mock = testutils.CreateAndConnectMockDB()
 			two_col_rows := sqlmock.NewRows([]string{"schemaname", "tablename"}).
 				AddRow("schema1", "table1").
 				AddRow("schema2", "table2")
@@ -195,11 +162,11 @@ var _ = Describe("utils/db tests", func() {
 			Expect(testSlice[1].Tablename).To(Equal("table2"))
 		})
 		It("Should be able to SELECT in a transaction", func() {
-			createAndConnectMockDB()
+			connection, mock = testutils.CreateAndConnectMockDB()
 			two_col_rows := sqlmock.NewRows([]string{"schemaname", "tablename"}).
 				AddRow("schema1", "table1").
 				AddRow("schema2", "table2")
-			expectBegin()
+			testutils.ExpectBegin(mock)
 			mock.ExpectQuery("SELECT (.*)").WillReturnRows(two_col_rows)
 			mock.ExpectCommit()
 
