@@ -32,8 +32,9 @@ func DoBackup() {
 	err := connection.Select(&tablenames, "SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
 	utils.CheckError(err)
 	for _, table := range tablenames {
-		attArray := GetTableAtts(connection, table.Tablename)
-		PrintCreateTable(os.Stdout, table.Tablename, attArray) // TODO: Change to write to file
+		tableAtts := GetTableAtts(connection, table.Tablename)
+		tableDefs := GetTableDefs(connection, table.Tablename)
+		PrintCreateTable(os.Stdout, table.Tablename, tableAtts, tableDefs) // TODO: Change to write to file
 	}
 
 	connection.Commit()

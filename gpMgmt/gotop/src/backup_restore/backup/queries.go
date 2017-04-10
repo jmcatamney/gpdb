@@ -6,7 +6,8 @@ import (
 	"fmt"
 )
 
-type TableAtts struct {
+type QueryTableAtts struct {
+	AttNum int
 	AttName string
 	AttNotNull bool
 	AttHasDef bool
@@ -15,8 +16,9 @@ type TableAtts struct {
 	AttEncoding sql.NullString
 }
 
-func GetTableAtts(connection *utils.DBConn, tablename string) []TableAtts {
-	query := `SELECT a.attname,
+func GetTableAtts(connection *utils.DBConn, tablename string) []QueryTableAtts {
+	query := `SELECT a.attnum,
+	a.attname,
 	a.attnotnull,
 	a.atthasdef,
 	a.attisdropped,
@@ -26,15 +28,36 @@ FROM pg_catalog.pg_attribute a
 	LEFT JOIN pg_catalog.pg_type t ON a.atttypid = t.oid
 	LEFT OUTER JOIN pg_catalog.pg_attribute_encoding e ON e.attrelid = a.attrelid
 	AND e.attnum = a.attnum
-WHERE a.attrelid = %s::pg_catalog.oid
+WHERE a.attrelid = %s
 	AND a.attnum > 0::pg_catalog.int2
 ORDER BY a.attrelid,
 	a.attnum;`
 
-	table := fmt.Sprintf("'%s'::regclass", tablename); // TODO: Replace with oid instead of cast at some point for performance
+	table := fmt.Sprintf("'%s'::regclass::pg_catalog.oid", tablename); // TODO: Replace with oid instead of cast at some point for performance
 	query = fmt.Sprintf(query, table)
 
-	results := make([]TableAtts, 0)
+	results := make([]QueryTableAtts, 0)
+
+	err := connection.Select(&results, query)
+	utils.CheckError(err)
+	return results
+}
+
+type QueryTableDefs struct {
+	AdNum int
+	DefVal string
+}
+
+func GetTableDefs(connection *utils.DBConn, tablename string) []QueryTableDefs {
+	query := `SELECT adnum,
+	pg_catalog.pg_get_expr(adbin, adrelid) AS defval 
+FROM pg_catalog.pg_attrdef
+WHERE adrelid = %s;`
+
+	table := fmt.Sprintf("'%s'::regclass::pg_catalog.oid", tablename); // TODO: Replace with oid instead of cast at some point for performance
+	query = fmt.Sprintf(query, table)
+
+	results := make([]QueryTableDefs, 0)
 
 	err := connection.Select(&results, query)
 	utils.CheckError(err)
