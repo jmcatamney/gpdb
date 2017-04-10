@@ -8,6 +8,7 @@ import (
 
 type TableAtts struct {
 	AttName string
+	AttNotNull bool
 	AttHasDef bool
 	AttIsDropped bool
 	AttTypName string
@@ -16,6 +17,7 @@ type TableAtts struct {
 
 func GetTableAtts(connection *utils.DBConn, tablename string) []TableAtts {
 	query := `SELECT a.attname,
+	a.attnotnull,
 	a.atthasdef,
 	a.attisdropped,
 	pg_catalog.format_type(t.oid,a.atttypmod) AS atttypname,
