@@ -7,13 +7,13 @@ import (
 )
 
 type QueryTableAtts struct {
-	AttNum int
-	AttName string
-	AttNotNull bool
-	AttHasDef bool
+	AttNum       int
+	AttName      string
+	AttNotNull   bool
+	AttHasDef    bool
 	AttIsDropped bool
-	AttTypName string
-	AttEncoding sql.NullString
+	AttTypName   string
+	AttEncoding  sql.NullString
 }
 
 func GetTableAtts(connection *utils.DBConn, tablename string) []QueryTableAtts {
@@ -33,7 +33,7 @@ WHERE a.attrelid = %s
 ORDER BY a.attrelid,
 	a.attnum;`
 
-	table := fmt.Sprintf("'%s'::regclass::pg_catalog.oid", tablename); // TODO: Replace with oid instead of cast at some point for performance
+	table := fmt.Sprintf("'%s'::regclass::pg_catalog.oid", tablename) // TODO: Replace with oid instead of cast at some point for performance
 	query = fmt.Sprintf(query, table)
 
 	results := make([]QueryTableAtts, 0)
@@ -44,7 +44,7 @@ ORDER BY a.attrelid,
 }
 
 type QueryTableDefs struct {
-	AdNum int
+	AdNum  int
 	DefVal string
 }
 
@@ -54,7 +54,7 @@ func GetTableDefs(connection *utils.DBConn, tablename string) []QueryTableDefs {
 FROM pg_catalog.pg_attrdef
 WHERE adrelid = %s;`
 
-	table := fmt.Sprintf("'%s'::regclass::pg_catalog.oid", tablename); // TODO: Replace with oid instead of cast at some point for performance
+	table := fmt.Sprintf("'%s'::regclass::pg_catalog.oid", tablename) // TODO: Replace with oid instead of cast at some point for performance
 	query = fmt.Sprintf(query, table)
 
 	results := make([]QueryTableDefs, 0)

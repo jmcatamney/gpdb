@@ -2,8 +2,8 @@ package backup
 
 import (
 	"fmt"
-	"strings"
 	"io"
+	"strings"
 )
 
 func PrintCreateTable(metadataFile io.Writer, tablename string, atts []QueryTableAtts, defs []QueryTableDefs) {

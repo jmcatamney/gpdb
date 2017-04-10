@@ -1,8 +1,8 @@
 package utils_test
 
 import (
-	"backup_restore/utils"
 	"backup_restore/testutils"
+	"backup_restore/utils"
 	"os"
 	"testing"
 

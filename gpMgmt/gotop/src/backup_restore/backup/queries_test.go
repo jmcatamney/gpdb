@@ -2,8 +2,8 @@ package backup_test
 
 import (
 	"backup_restore/backup"
-	"backup_restore/utils"
 	"backup_restore/testutils"
+	"backup_restore/utils"
 	"database/sql/driver"
 	"errors"
 	"testing"

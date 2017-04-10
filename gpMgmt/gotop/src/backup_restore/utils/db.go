@@ -107,7 +107,7 @@ func (dbconn *DBConn) Get(dest interface{}, query string) error {
 }
 
 func (dbconn *DBConn) GetDBSize() string {
-	size := struct{DBSize string}{}
+	size := struct{ DBSize string }{}
 	sizeQuery := fmt.Sprintf("SELECT pg_size_pretty(sodddatsize) as dbsize FROM gp_toolkit.gp_size_of_database WHERE sodddatname='%s'", dbconn.DBName)
 	err := dbconn.Get(&size, sizeQuery)
 	CheckError(err)
