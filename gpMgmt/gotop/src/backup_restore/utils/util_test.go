@@ -11,7 +11,6 @@ import (
 
 func TestUtil(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "util.go unit tests")
 }
 
 var _ = Describe("utils/util tests", func() {

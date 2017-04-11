@@ -13,7 +13,6 @@ import (
 
 func TestMetadata(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "metadata.go unit tests")
 }
 
 var _ = Describe("backup/metadata tests", func() {

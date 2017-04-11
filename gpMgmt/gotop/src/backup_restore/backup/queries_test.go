@@ -18,7 +18,6 @@ var mock sqlmock.Sqlmock
 
 func TestQueries(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "queries.go unit tests")
 }
 
 var _ = Describe("backup/queries tests", func() {
