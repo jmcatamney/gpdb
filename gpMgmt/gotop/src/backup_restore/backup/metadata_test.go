@@ -30,17 +30,15 @@ var _ = Describe("backup/metadata tests", func() {
 		defsTwo := backup.QueryTableDefs{2, "'bar'::text"}
 		defsEmpty := []backup.QueryTableDefs{}
 
-		Context("Table with one column", func() {
-			It("Prints a CREATE TABLE block with one line", func() {
+		Context("No special table attributes", func() {
+			It("prints a CREATE TABLE block with one line", func() {
 				atts := []backup.QueryTableAtts{attsOne}
 				backup.PrintCreateTableStatement(buffer, "foo", atts, defsEmpty)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE foo (
 	i int
 );`)
 			})
-		})
-		Context("Table with multiple columns", func() {
-			It("Prints a CREATE TABLE block with one line per attribute", func() {
+			It("prints a CREATE TABLE block with one line per attribute", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsTwo}
 				backup.PrintCreateTableStatement(buffer, "foo", atts, defsEmpty)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE foo (
@@ -48,17 +46,13 @@ var _ = Describe("backup/metadata tests", func() {
 	j character varying(20)
 );`)
 			})
-		})
-		Context("Table with no columns", func() {
-			It("Prints a CREATE TABLE block with no attributes", func() {
+			It("prints a CREATE TABLE block with no attributes", func() {
+			})
+			It("prints a CREATE TABLE block without a dropped attribute", func() {
 			})
 		})
-		Context("Table with dropped column", func() {
-			It("Prints a CREATE TABLE block without the dropped attribute", func() {
-			})
-		})
-		Context("Table with ENCODING", func() {
-			It("Prints a CREATE TABLE block where one line has the given ENCODING and the other has the default ENCODING", func() {
+		Context("One special table attribute", func() {
+			It("prints a CREATE TABLE block where one line has the given ENCODING and the other has the default ENCODING", func() {
 				atts := []backup.QueryTableAtts{attsOneEnc, attsTwoEnc}
 				backup.PrintCreateTableStatement(buffer, "foo", atts, defsEmpty)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE foo (
@@ -66,9 +60,7 @@ var _ = Describe("backup/metadata tests", func() {
 	j character varying(20) ENCODING(compresstype=zlib,blocksize=65536,compresslevel=1)
 );`)
 			})
-		})
-		Context("Table with NOT NULL", func() {
-			It("Prints a CREATE TABLE block where one line contains NOT NULL", func() {
+			It("prints a CREATE TABLE block where one line contains NOT NULL", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsNotNull}
 				backup.PrintCreateTableStatement(buffer, "foo", atts, defsEmpty)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE foo (
@@ -76,19 +68,7 @@ var _ = Describe("backup/metadata tests", func() {
 	j character varying(20) NOT NULL
 );`)
 			})
-		})
-		Context("Table with NOT NULL and ENCODING", func() {
-			It("Prints a CREATE TABLE block where one line contains both NOT NULL and ENCODING", func() {
-				atts := []backup.QueryTableAtts{attsOneEnc, attsEncNotNull}
-				backup.PrintCreateTableStatement(buffer, "foo", atts, defsEmpty)
-				testutils.ExpectRegexp(buffer, `CREATE TABLE foo (
-	i int ENCODING(compresstype=none,blocksize=32768,compresslevel=0),
-	j character varying(20) NOT NULL ENCODING(compresstype=zlib,blocksize=65536,compresslevel=1)
-);`)
-			})
-		})
-		Context("Table with one default value", func() {
-			It("Prints a CREATE TABLE block where one line contains DEFAULT", func() {
+			It("prints a CREATE TABLE block where one line contains DEFAULT", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsTwo}
 				defs := []backup.QueryTableDefs{defsOne}
 				backup.PrintCreateTableStatement(buffer, "foo", atts, defs)
@@ -97,9 +77,7 @@ var _ = Describe("backup/metadata tests", func() {
 	j character varying(20)
 );`)
 			})
-		})
-		Context("Table with two default values", func() {
-			It("Prints a CREATE TABLE block where both lines contain DEFAULT", func() {
+			It("prints a CREATE TABLE block where both lines contain DEFAULT", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsTwo}
 				defs := []backup.QueryTableDefs{defsOne, defsTwo}
 				backup.PrintCreateTableStatement(buffer, "foo", atts, defs)
@@ -109,8 +87,16 @@ var _ = Describe("backup/metadata tests", func() {
 );`)
 			})
 		})
-		Context("Table with default value and NOT NULL", func() {
-			It("Prints a CREATE TABLE block where one line contains both DEFAULT and NOT NULL", func() {
+		Context("Multiple special table attributes on one column", func() {
+			It("prints a CREATE TABLE block where one line contains both NOT NULL and ENCODING", func() {
+				atts := []backup.QueryTableAtts{attsOneEnc, attsEncNotNull}
+				backup.PrintCreateTableStatement(buffer, "foo", atts, defsEmpty)
+				testutils.ExpectRegexp(buffer, `CREATE TABLE foo (
+	i int ENCODING(compresstype=none,blocksize=32768,compresslevel=0),
+	j character varying(20) NOT NULL ENCODING(compresstype=zlib,blocksize=65536,compresslevel=1)
+);`)
+			})
+			It("prints a CREATE TABLE block where one line contains both DEFAULT and NOT NULL", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsNotNull}
 				defs := []backup.QueryTableDefs{defsTwo}
 				backup.PrintCreateTableStatement(buffer, "foo", atts, defs)
@@ -119,9 +105,7 @@ var _ = Describe("backup/metadata tests", func() {
 	j character varying(20) DEFAULT 'bar'::text NOT NULL
 );`)
 			})
-		})
-		Context("Table with default value and ENCODING", func() {
-			It("Prints a CREATE TABLE block where one line contains both DEFAULT and ENCODING", func() {
+			It("prints a CREATE TABLE block where one line contains both DEFAULT and ENCODING", func() {
 				atts := []backup.QueryTableAtts{attsOneEnc, attsTwoEnc}
 				defs := []backup.QueryTableDefs{defsTwo}
 				backup.PrintCreateTableStatement(buffer, "foo", atts, defs)
@@ -130,9 +114,7 @@ var _ = Describe("backup/metadata tests", func() {
 	j character varying(20) DEFAULT 'bar'::text ENCODING(compresstype=zlib,blocksize=65536,compresslevel=1)
 );`)
 			})
-		})
-		Context("Table with default value, NOT NULL, and ENCODING", func() {
-			It("Prints a CREATE TABLE block where one line contains all three of DEFAULT, NOT NULL, and ENCODING", func() {
+			It("prints a CREATE TABLE block where one line contains all three of DEFAULT, NOT NULL, and ENCODING", func() {
 				atts := []backup.QueryTableAtts{attsOneEnc, attsEncNotNull}
 				defs := []backup.QueryTableDefs{defsTwo}
 				backup.PrintCreateTableStatement(buffer, "foo", atts, defs)
