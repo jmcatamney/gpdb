@@ -21,6 +21,11 @@ func TestQueries(t *testing.T) {
 	RunSpecs(t, "queries.go unit tests")
 }
 
+func matchPrimaryUnique(result backup.QueryPrimaryUniqueConstraint, primary bool, unique bool) {
+	Expect(result.IsPrimary).Should(Equal(primary))
+	Expect(result.IsUnique).Should(Equal(unique))
+}
+
 var _ = Describe("backup/queries tests", func() {
 	Describe("GetTableAtts", func() {
 		BeforeEach(func() {
@@ -118,19 +123,68 @@ var _ = Describe("backup/queries tests", func() {
 		header := []string{"attname", "isprimary", "isunique"}
 		rowOne := []driver.Value{"i", "f", "f"}
 		rowTwo := []driver.Value{"j", "f", "f"}
-		rowUnique := []driver.Value{"j", "f", "t"}
+		rowOneUnique := []driver.Value{"i", "f", "t"}
+		rowTwoUnique := []driver.Value{"j", "f", "t"}
 		rowOnePrimary := []driver.Value{"i", "t", "t"}
 		rowTwoPrimary := []driver.Value{"j", "t", "t"}
+		rowThreePrimary := []driver.Value{"k", "t", "t"}
 
 		It("returns a slice for a table with no UNIQUE or PRIMARY KEY columns", func() {
+			fakeResult := sqlmock.NewRows(header).AddRow(rowOne...).AddRow(rowTwo...)
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
+			results := backup.GetPrimaryUniqueConstraints(connection, 0)
+			Expect(len(results)).Should(Equal(2))
+			matchPrimaryUnique(results[0], false, false)
+			matchPrimaryUnique(results[1], false, false)
 		})
 		It("returns a slice for a table with one UNIQUE column", func() {
+			fakeResult := sqlmock.NewRows(header).AddRow(rowOne...).AddRow(rowTwoUnique...)
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
+			results := backup.GetPrimaryUniqueConstraints(connection, 0)
+			Expect(len(results)).Should(Equal(2))
+			matchPrimaryUnique(results[0], false, false)
+			matchPrimaryUnique(results[1], false, true)
 		})
 		It("returns a slice for a table with two UNIQUE columns", func() {
+			fakeResult := sqlmock.NewRows(header).AddRow(rowOneUnique...).AddRow(rowTwoUnique...)
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
+			results := backup.GetPrimaryUniqueConstraints(connection, 0)
+			Expect(len(results)).Should(Equal(2))
+			matchPrimaryUnique(results[0], false, true)
+			matchPrimaryUnique(results[1], false, true)
 		})
 		It("returns a slice for a table with one PRIMARY KEY column", func() {
+			fakeResult := sqlmock.NewRows(header).AddRow(rowOnePrimary...).AddRow(rowTwoUnique...)
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
+			results := backup.GetPrimaryUniqueConstraints(connection, 0)
+			Expect(len(results)).Should(Equal(2))
+			matchPrimaryUnique(results[0], true, true)
+			matchPrimaryUnique(results[1], false, true)
 		})
 		It("returns a slice for a table with two PRIMARY KEY columns", func() {
+			fakeResult := sqlmock.NewRows(header).AddRow(rowOnePrimary...).AddRow(rowTwoPrimary...)
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
+			results := backup.GetPrimaryUniqueConstraints(connection, 0)
+			Expect(len(results)).Should(Equal(2))
+			matchPrimaryUnique(results[0], true, true)
+			matchPrimaryUnique(results[1], true, true)
+		})
+		It("returns a slice for a table with PRIMARY KEY column and one UNIQUE column", func() {
+			fakeResult := sqlmock.NewRows(header).AddRow(rowOnePrimary...).AddRow(rowTwoUnique...)
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
+			results := backup.GetPrimaryUniqueConstraints(connection, 0)
+			Expect(len(results)).Should(Equal(2))
+			matchPrimaryUnique(results[0], true, true)
+			matchPrimaryUnique(results[1], false, true)
+		})
+		It("returns a slice for a table with two PRIMARY KEY columns and one UNIQUE column", func() {
+			fakeResult := sqlmock.NewRows(header).AddRow(rowOnePrimary...).AddRow(rowTwoUnique...).AddRow(rowThreePrimary...)
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
+			results := backup.GetPrimaryUniqueConstraints(connection, 0)
+			Expect(len(results)).Should(Equal(3))
+			matchPrimaryUnique(results[0], true, true)
+			matchPrimaryUnique(results[1], false, true)
+			matchPrimaryUnique(results[2], true, true)
 		})
 	})
 })
