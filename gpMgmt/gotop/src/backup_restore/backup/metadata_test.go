@@ -134,77 +134,77 @@ var _ = Describe("backup/metadata tests", func() {
 			})
 		})
 	})
-	Describe("HandlePkFkUniqueConstraints", func() {
-		uniqueOne := backup.QueryPkFkUniqueConstraint{"tablename_i_key", "UNIQUE (i)"}
-		uniqueTwo := backup.QueryPkFkUniqueConstraint{"tablename_j_key", "UNIQUE (j)"}
-		primarySingle := backup.QueryPkFkUniqueConstraint{"tablename_pkey", "PRIMARY KEY (i)"}
-		primaryComposite := backup.QueryPkFkUniqueConstraint{"tablename_pkey", "PRIMARY KEY (i, j)"}
-		foreignOne := backup.QueryPkFkUniqueConstraint{"tablename_i_fkey", "FOREIGN KEY (i) REFERENCES other_tablename(a)"}
-		foreignTwo := backup.QueryPkFkUniqueConstraint{"tablename_j_fkey", "FOREIGN KEY (j) REFERENCES other_tablename(b)"}
+	Describe("HandleConstraints", func() {
+		uniqueOne := backup.QueryConstraint{"tablename_i_key", "UNIQUE (i)"}
+		uniqueTwo := backup.QueryConstraint{"tablename_j_key", "UNIQUE (j)"}
+		primarySingle := backup.QueryConstraint{"tablename_pkey", "PRIMARY KEY (i)"}
+		primaryComposite := backup.QueryConstraint{"tablename_pkey", "PRIMARY KEY (i, j)"}
+		foreignOne := backup.QueryConstraint{"tablename_i_fkey", "FOREIGN KEY (i) REFERENCES other_tablename(a)"}
+		foreignTwo := backup.QueryConstraint{"tablename_j_fkey", "FOREIGN KEY (j) REFERENCES other_tablename(b)"}
 
 		Context("No ALTER TABLE statements", func() {
 			It("returns an empty slice", func() {
-				cons := []backup.QueryPkFkUniqueConstraint{}
-				constraints := backup.HandlePkFkUniqueConstraints("tablename", cons)
+				cons := []backup.QueryConstraint{}
+				constraints := backup.HandleConstraints("tablename", cons)
 				Expect(len(constraints)).To(Equal(0))
 			})
 		})
 		Context("ALTER TABLE statements involving different columns", func() {
 			It("returns a slice containing one UNIQUE constraint", func() {
-				cons := []backup.QueryPkFkUniqueConstraint{uniqueOne}
-				constraints := backup.HandlePkFkUniqueConstraints("tablename", cons)
+				cons := []backup.QueryConstraint{uniqueOne}
+				constraints := backup.HandleConstraints("tablename", cons)
 				Expect(len(constraints)).To(Equal(1))
 				Expect(constraints[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_i_key UNIQUE (i);"))
 			})
 			It("returns a slice containing two UNIQUE constraints", func() {
-				cons := []backup.QueryPkFkUniqueConstraint{uniqueOne, uniqueTwo}
-				constraints := backup.HandlePkFkUniqueConstraints("tablename", cons)
+				cons := []backup.QueryConstraint{uniqueOne, uniqueTwo}
+				constraints := backup.HandleConstraints("tablename", cons)
 				Expect(len(constraints)).To(Equal(2))
 				Expect(constraints[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_i_key UNIQUE (i);"))
 				Expect(constraints[1]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_j_key UNIQUE (j);"))
 			})
 			It("returns a slice containing PRIMARY KEY constraint on one column", func() {
-				cons := []backup.QueryPkFkUniqueConstraint{primarySingle}
-				constraints := backup.HandlePkFkUniqueConstraints("tablename", cons)
+				cons := []backup.QueryConstraint{primarySingle}
+				constraints := backup.HandleConstraints("tablename", cons)
 				Expect(len(constraints)).To(Equal(1))
 				Expect(constraints[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_pkey PRIMARY KEY (i);"))
 			})
 			It("returns a slice containing composite PRIMARY KEY constraint on two columns", func() {
-				cons := []backup.QueryPkFkUniqueConstraint{primaryComposite}
-				constraints := backup.HandlePkFkUniqueConstraints("tablename", cons)
+				cons := []backup.QueryConstraint{primaryComposite}
+				constraints := backup.HandleConstraints("tablename", cons)
 				Expect(len(constraints)).To(Equal(1))
 				Expect(constraints[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_pkey PRIMARY KEY (i, j);"))
 			})
 			It("returns a slice containing one FOREIGN KEY constraint", func() {
-				cons := []backup.QueryPkFkUniqueConstraint{foreignOne}
-				constraints := backup.HandlePkFkUniqueConstraints("tablename", cons)
+				cons := []backup.QueryConstraint{foreignOne}
+				constraints := backup.HandleConstraints("tablename", cons)
 				Expect(len(constraints)).To(Equal(1))
 				Expect(constraints[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_i_fkey FOREIGN KEY (i) REFERENCES other_tablename(a);"))
 			})
 			It("returns a slice containing two FOREIGN KEY constraints", func() {
-				cons := []backup.QueryPkFkUniqueConstraint{foreignOne, foreignTwo}
-				constraints := backup.HandlePkFkUniqueConstraints("tablename", cons)
+				cons := []backup.QueryConstraint{foreignOne, foreignTwo}
+				constraints := backup.HandleConstraints("tablename", cons)
 				Expect(len(constraints)).To(Equal(2))
 				Expect(constraints[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_i_fkey FOREIGN KEY (i) REFERENCES other_tablename(a);"))
 				Expect(constraints[1]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_j_fkey FOREIGN KEY (j) REFERENCES other_tablename(b);"))
 			})
 			It("returns a slice containing one UNIQUE constraint and one FOREIGN KEY constraint", func() {
-				cons := []backup.QueryPkFkUniqueConstraint{uniqueOne, foreignTwo}
-				constraints := backup.HandlePkFkUniqueConstraints("tablename", cons)
+				cons := []backup.QueryConstraint{uniqueOne, foreignTwo}
+				constraints := backup.HandleConstraints("tablename", cons)
 				Expect(len(constraints)).To(Equal(2))
 				Expect(constraints[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_i_key UNIQUE (i);"))
 				Expect(constraints[1]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_j_fkey FOREIGN KEY (j) REFERENCES other_tablename(b);"))
 			})
 			It("returns a slice containing one PRIMARY KEY constraint and one FOREIGN KEY constraint", func() {
-				cons := []backup.QueryPkFkUniqueConstraint{primarySingle, foreignTwo}
-				constraints := backup.HandlePkFkUniqueConstraints("tablename", cons)
+				cons := []backup.QueryConstraint{primarySingle, foreignTwo}
+				constraints := backup.HandleConstraints("tablename", cons)
 				Expect(len(constraints)).To(Equal(2))
 				Expect(constraints[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_pkey PRIMARY KEY (i);"))
 				Expect(constraints[1]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_j_fkey FOREIGN KEY (j) REFERENCES other_tablename(b);"))
 			})
 			It("returns a slice containing a two-column composite PRIMARY KEY constraint and one FOREIGN KEY constraint", func() {
-				cons := []backup.QueryPkFkUniqueConstraint{primaryComposite, foreignTwo}
-				constraints := backup.HandlePkFkUniqueConstraints("tablename", cons)
+				cons := []backup.QueryConstraint{primaryComposite, foreignTwo}
+				constraints := backup.HandleConstraints("tablename", cons)
 				Expect(len(constraints)).To(Equal(2))
 				Expect(constraints[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_pkey PRIMARY KEY (i, j);"))
 				Expect(constraints[1]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_j_fkey FOREIGN KEY (j) REFERENCES other_tablename(b);"))
@@ -212,22 +212,22 @@ var _ = Describe("backup/metadata tests", func() {
 		})
 		Context("ALTER TABLE statements involving the same column", func() {
 			It("returns a slice containing one UNIQUE constraint and one FOREIGN KEY constraint", func() {
-				cons := []backup.QueryPkFkUniqueConstraint{uniqueOne, foreignOne}
-				constraints := backup.HandlePkFkUniqueConstraints("tablename", cons)
+				cons := []backup.QueryConstraint{uniqueOne, foreignOne}
+				constraints := backup.HandleConstraints("tablename", cons)
 				Expect(len(constraints)).To(Equal(2))
 				Expect(constraints[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_i_key UNIQUE (i);"))
 				Expect(constraints[1]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_i_fkey FOREIGN KEY (i) REFERENCES other_tablename(a);"))
 			})
 			It("returns a slice containing one PRIMARY KEY constraint and one FOREIGN KEY constraint", func() {
-				cons := []backup.QueryPkFkUniqueConstraint{primarySingle, foreignOne}
-				constraints := backup.HandlePkFkUniqueConstraints("tablename", cons)
+				cons := []backup.QueryConstraint{primarySingle, foreignOne}
+				constraints := backup.HandleConstraints("tablename", cons)
 				Expect(len(constraints)).To(Equal(2))
 				Expect(constraints[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_pkey PRIMARY KEY (i);"))
 				Expect(constraints[1]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_i_fkey FOREIGN KEY (i) REFERENCES other_tablename(a);"))
 			})
 			It("returns a slice containing a two-column composite PRIMARY KEY constraint and one FOREIGN KEY constraint", func() {
-				cons := []backup.QueryPkFkUniqueConstraint{primaryComposite, foreignOne}
-				constraints := backup.HandlePkFkUniqueConstraints("tablename", cons)
+				cons := []backup.QueryConstraint{primaryComposite, foreignOne}
+				constraints := backup.HandleConstraints("tablename", cons)
 				Expect(len(constraints)).To(Equal(2))
 				Expect(constraints[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_pkey PRIMARY KEY (i, j);"))
 				Expect(constraints[1]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_i_fkey FOREIGN KEY (i) REFERENCES other_tablename(a);"))

@@ -34,17 +34,17 @@ func PrintCreateTableStatement(metadataFile io.Writer, tablename string, atts []
 	fmt.Fprintln(metadataFile, ");")
 }
 
-func PrintAlterTableStatements(metadataFile io.Writer, tablename string, pkfkunique []QueryPkFkUniqueConstraint) {
-	constraints := HandlePkFkUniqueConstraints(tablename, pkfkunique)
+func PrintAlterTableStatements(metadataFile io.Writer, tablename string, constraint []QueryConstraint) {
+	constraints := HandleConstraints(tablename, constraint)
 	for _, cons := range constraints {
 		fmt.Fprintln(metadataFile, cons)
 	}
 }
 
-func HandlePkFkUniqueConstraints(tablename string, pkfkunique []QueryPkFkUniqueConstraint) []string {
+func HandleConstraints(tablename string, constraint []QueryConstraint) []string {
 	alterStr := fmt.Sprintf("\n\nALTER TABLE ONLY %s ADD CONSTRAINT", tablename)
 	constraints := make([]string, 0)
-	for _, con := range pkfkunique {
+	for _, con := range constraint {
 		conStr := fmt.Sprintf("%s %s %s;", alterStr, con.ConName, con.ConDef)
 		constraints = append(constraints, conStr)
 	}

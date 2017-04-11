@@ -85,12 +85,12 @@ WHERE adrelid = %d;`, oid)
 	return results
 }
 
-type QueryPkFkUniqueConstraint struct {
+type QueryConstraint struct {
 	ConName string
 	ConDef  string
 }
 
-func GetPkFkUniqueConstraints(connection *utils.DBConn, oid uint32) []QueryPkFkUniqueConstraint {
+func GetConstraints(connection *utils.DBConn, oid uint32) []QueryConstraint {
 	/* The following query is not taken from pg_dump, as the pg_dump query gets a lot of information we
 	 * don't need and is relatively slow due to several JOINS, the slowest of which is on pg_depend. This
 	 * query is based on the queries underlying \d in psql, has roughly half the cost according to EXPLAIN,
@@ -110,7 +110,7 @@ WHERE r.conrelid = %d
 ORDER BY condef;
 `, oid)
 
-	results := make([]QueryPkFkUniqueConstraint, 0)
+	results := make([]QueryConstraint, 0)
 	err := connection.Select(&results, query)
 	utils.CheckError(err)
 	return results

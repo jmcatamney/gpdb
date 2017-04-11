@@ -33,8 +33,8 @@ func DoBackup() {
 		PrintCreateTableStatement(os.Stdout, table.Tablename, tableAtts, tableDefs) // TODO: Change to write to file
 	}
 	for _, table := range tables {
-		pkfkunique := GetPkFkUniqueConstraints(connection, table.Oid)
-		PrintAlterTableStatements(os.Stdout, table.Tablename, pkfkunique) // TODO: Change to write to file
+		constraints := GetConstraints(connection, table.Oid)
+		PrintAlterTableStatements(os.Stdout, table.Tablename, constraints) // TODO: Change to write to file
 	}
 
 	connection.Commit()

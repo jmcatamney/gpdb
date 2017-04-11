@@ -110,7 +110,7 @@ var _ = Describe("backup/queries tests", func() {
 			Expect(len(results)).To(Equal(0))
 		})
 	})
-	Describe("GetPkFkUniqueConstraints", func() {
+	Describe("GetConstraints", func() {
 		BeforeEach(func() {
 			connection, mock = testutils.CreateAndConnectMockDB()
 		})
@@ -121,12 +121,14 @@ var _ = Describe("backup/queries tests", func() {
 		rowPrimaryComposite := []driver.Value{"tablename_pkey", "PRIMARY KEY (i, j)"}
 		rowOneForeign := []driver.Value{"tablename_i_fkey", "FOREIGN KEY (i) REFERENCES other_tablename(a)"}
 		rowTwoForeign := []driver.Value{"tablename_j_fkey", "FOREIGN KEY (j) REFERENCES other_tablename(b)"}
+		rowCheckSingle := []driver.Value{"check_i", "CHECK (i <> 42)"}
+		rowCheckComposite := []driver.Value{"check_ij", "CHECK (i <> 42 AND j::text <> ''::text)"}
 
 		Context("No constraints", func() {
 			It("returns a slice for a table with no UNIQUE or PRIMARY KEY columns", func() {
 				fakeResult := sqlmock.NewRows(header)
 				mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-				results := backup.GetPkFkUniqueConstraints(connection, 0)
+				results := backup.GetConstraints(connection, 0)
 				Expect(len(results)).To(Equal(0))
 			})
 		})
@@ -134,7 +136,7 @@ var _ = Describe("backup/queries tests", func() {
 			It("returns a slice for a table with one UNIQUE column", func() {
 				fakeResult := sqlmock.NewRows(header).AddRow(rowOneUnique...)
 				mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-				results := backup.GetPkFkUniqueConstraints(connection, 0)
+				results := backup.GetConstraints(connection, 0)
 				Expect(len(results)).To(Equal(1))
 				Expect(results[0].ConName).To(Equal("tablename_i_uniq"))
 				Expect(results[0].ConDef).To(Equal("UNIQUE (i)"))
@@ -142,7 +144,7 @@ var _ = Describe("backup/queries tests", func() {
 			It("returns a slice for a table with two UNIQUE columns", func() {
 				fakeResult := sqlmock.NewRows(header).AddRow(rowOneUnique...).AddRow(rowTwoUnique...)
 				mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-				results := backup.GetPkFkUniqueConstraints(connection, 0)
+				results := backup.GetConstraints(connection, 0)
 				Expect(len(results)).To(Equal(2))
 				Expect(results[0].ConName).To(Equal("tablename_i_uniq"))
 				Expect(results[0].ConDef).To(Equal("UNIQUE (i)"))
@@ -152,7 +154,7 @@ var _ = Describe("backup/queries tests", func() {
 			It("returns a slice for a table with a PRIMARY KEY on one column", func() {
 				fakeResult := sqlmock.NewRows(header).AddRow(rowPrimarySingle...)
 				mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-				results := backup.GetPkFkUniqueConstraints(connection, 0)
+				results := backup.GetConstraints(connection, 0)
 				Expect(len(results)).To(Equal(1))
 				Expect(results[0].ConName).To(Equal("tablename_pkey"))
 				Expect(results[0].ConDef).To(Equal("PRIMARY KEY (i)"))
@@ -160,7 +162,7 @@ var _ = Describe("backup/queries tests", func() {
 			It("returns a slice for a table with a composite PRIMARY KEY on two columns", func() {
 				fakeResult := sqlmock.NewRows(header).AddRow(rowPrimaryComposite...)
 				mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-				results := backup.GetPkFkUniqueConstraints(connection, 0)
+				results := backup.GetConstraints(connection, 0)
 				Expect(len(results)).To(Equal(1))
 				Expect(results[0].ConName).To(Equal("tablename_pkey"))
 				Expect(results[0].ConDef).To(Equal("PRIMARY KEY (i, j)"))
@@ -168,7 +170,7 @@ var _ = Describe("backup/queries tests", func() {
 			It("returns a slice for a table with one FOREIGN KEY column", func() {
 				fakeResult := sqlmock.NewRows(header).AddRow(rowOneForeign...)
 				mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-				results := backup.GetPkFkUniqueConstraints(connection, 0)
+				results := backup.GetConstraints(connection, 0)
 				Expect(len(results)).To(Equal(1))
 				Expect(results[0].ConName).To(Equal("tablename_i_fkey"))
 				Expect(results[0].ConDef).To(Equal("FOREIGN KEY (i) REFERENCES other_tablename(a)"))
@@ -176,44 +178,54 @@ var _ = Describe("backup/queries tests", func() {
 			It("returns a slice for a table with two FOREIGN KEY columns", func() {
 				fakeResult := sqlmock.NewRows(header).AddRow(rowOneForeign...).AddRow(rowTwoForeign...)
 				mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-				results := backup.GetPkFkUniqueConstraints(connection, 0)
+				results := backup.GetConstraints(connection, 0)
 				Expect(len(results)).To(Equal(2))
 				Expect(results[0].ConName).To(Equal("tablename_i_fkey"))
 				Expect(results[0].ConDef).To(Equal("FOREIGN KEY (i) REFERENCES other_tablename(a)"))
 				Expect(results[1].ConName).To(Equal("tablename_j_fkey"))
 				Expect(results[1].ConDef).To(Equal("FOREIGN KEY (j) REFERENCES other_tablename(b)"))
 			})
-		})
-		Context("Columns with multiple constraints", func() {
-			It("returns a slice for a table with a single UNIQUE FOREIGN KEY column", func() {
-				fakeResult := sqlmock.NewRows(header).AddRow(rowOneUnique...).AddRow(rowOneForeign...)
+			It("returns a slice for a table with a CHECK on one column", func() {
+				fakeResult := sqlmock.NewRows(header).AddRow(rowCheckSingle...)
 				mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-				results := backup.GetPkFkUniqueConstraints(connection, 0)
-				Expect(len(results)).To(Equal(2))
+				results := backup.GetConstraints(connection, 0)
+				Expect(len(results)).To(Equal(1))
+				Expect(results[0].ConName).To(Equal("check_i"))
+				Expect(results[0].ConDef).To(Equal("CHECK (i <> 42)"))
+			})
+			It("returns a slice for a table with a composite CHECK on two columns", func() {
+				fakeResult := sqlmock.NewRows(header).AddRow(rowCheckComposite...)
+				mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
+				results := backup.GetConstraints(connection, 0)
+				Expect(len(results)).To(Equal(1))
+				Expect(results[0].ConName).To(Equal("check_ij"))
+				Expect(results[0].ConDef).To(Equal("CHECK (i <> 42 AND j::text <> ''::text)"))
+			})
+		})
+		Context("Tables with multiple constraints", func() {
+			It("returns a slice for a table with one column having each simple constraint type", func() {
+				fakeResult := sqlmock.NewRows(header).AddRow(rowOneUnique...).AddRow(rowOneForeign...).AddRow(rowCheckSingle...)
+				mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
+				results := backup.GetConstraints(connection, 0)
+				Expect(len(results)).To(Equal(3))
 				Expect(results[0].ConName).To(Equal("tablename_i_uniq"))
 				Expect(results[0].ConDef).To(Equal("UNIQUE (i)"))
 				Expect(results[1].ConName).To(Equal("tablename_i_fkey"))
 				Expect(results[1].ConDef).To(Equal("FOREIGN KEY (i) REFERENCES other_tablename(a)"))
+				Expect(results[2].ConName).To(Equal("check_i"))
+				Expect(results[2].ConDef).To(Equal("CHECK (i <> 42)"))
 			})
-			It("returns a slice for a table with a single UNIQUE PRIMARY KEY column", func() {
-				fakeResult := sqlmock.NewRows(header).AddRow(rowOneUnique...).AddRow(rowPrimarySingle...)
+			It("returns a slice for a table with one column having each complex constraint type", func() {
+				fakeResult := sqlmock.NewRows(header).AddRow(rowOneForeign...).AddRow(rowPrimaryComposite...).AddRow(rowCheckComposite...)
 				mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-				results := backup.GetPkFkUniqueConstraints(connection, 0)
-				Expect(len(results)).To(Equal(2))
-				Expect(results[0].ConName).To(Equal("tablename_i_uniq"))
-				Expect(results[0].ConDef).To(Equal("UNIQUE (i)"))
-				Expect(results[1].ConName).To(Equal("tablename_pkey"))
-				Expect(results[1].ConDef).To(Equal("PRIMARY KEY (i)"))
-			})
-			It("returns a slice for a table with a single UNIQUE column used in a composite PRIMARY KEY on two columns", func() {
-				fakeResult := sqlmock.NewRows(header).AddRow(rowOneUnique...).AddRow(rowPrimaryComposite...)
-				mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-				results := backup.GetPkFkUniqueConstraints(connection, 0)
-				Expect(len(results)).To(Equal(2))
-				Expect(results[0].ConName).To(Equal("tablename_i_uniq"))
-				Expect(results[0].ConDef).To(Equal("UNIQUE (i)"))
+				results := backup.GetConstraints(connection, 0)
+				Expect(len(results)).To(Equal(3))
+				Expect(results[0].ConName).To(Equal("tablename_i_fkey"))
+				Expect(results[0].ConDef).To(Equal("FOREIGN KEY (i) REFERENCES other_tablename(a)"))
 				Expect(results[1].ConName).To(Equal("tablename_pkey"))
 				Expect(results[1].ConDef).To(Equal("PRIMARY KEY (i, j)"))
+				Expect(results[2].ConName).To(Equal("check_ij"))
+				Expect(results[2].ConDef).To(Equal("CHECK (i <> 42 AND j::text <> ''::text)"))
 			})
 		})
 	})
