@@ -63,3 +63,37 @@ WHERE adrelid = %s;`
 	utils.CheckError(err)
 	return results
 }
+
+type QueryPrimaryUniqueConstraint struct {
+	AttName   string
+	IsPrimary bool
+	IsUnique  bool
+}
+
+func GetPrimaryUniqueConstraints(connection *utils.DBConn, tablename string) []QueryPrimaryUniqueConstraint {
+	/* The following query is not taken from pg_dump, as the pg_dump query gets a lot of information we
+	 * don't need and is relatively slow due to several JOINS, the slowest of which is on pg_depend. This
+	 * query has roughly half the cost according to EXPLAIN and gets us only the information we need.*/
+	query := `SELECT a.attname,
+	i.indisprimary AS isprimary,
+	i.indisunique AS isunique
+FROM pg_attribute a
+JOIN (SELECT
+	indrelid,
+	indisprimary,
+	indisunique,
+	unnest(indkey) AS indkey
+FROM pg_index) AS i
+	ON a.attrelid = i.indrelid
+WHERE a.attrelid = %s
+AND a.attnum = i.indkey;`
+
+	table := fmt.Sprintf("'%s'::regclass::pg_catalog.oid", tablename) // TODO: Replace with oid instead of cast at some point for performance
+	query = fmt.Sprintf(query, table)
+
+	results := make([]QueryPrimaryUniqueConstraint, 0)
+
+	err := connection.Select(&results, query)
+	utils.CheckError(err)
+	return results
+}

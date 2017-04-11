@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func PrintCreateTable(metadataFile io.Writer, tablename string, atts []QueryTableAtts, defs []QueryTableDefs) {
+func PrintCreateTableStatement(metadataFile io.Writer, tablename string, atts []QueryTableAtts, defs []QueryTableDefs) {
 	fmt.Fprintf(metadataFile, "CREATE TABLE %s (\n", tablename)
 	lines := make([]string, 0)
 	for _, att := range atts {
@@ -30,4 +30,31 @@ func PrintCreateTable(metadataFile io.Writer, tablename string, atts []QueryTabl
 	}
 	fmt.Fprintln(metadataFile, strings.Join(lines, ",\n"))
 	fmt.Fprintln(metadataFile, ");")
+}
+
+func PrintAlterTableStatements(metadataFile io.Writer, tablename string, primaryunique []QueryPrimaryUniqueConstraint) {
+	constraints := HandlePrimaryUniqueConstraints(tablename, primaryunique)
+	for _, cons := range constraints {
+		fmt.Fprintln(metadataFile, cons)
+	}
+}
+
+func HandlePrimaryUniqueConstraints(tablename string, primaryunique []QueryPrimaryUniqueConstraint) []string {
+	alterStr := fmt.Sprintf("ALTER TABLE ONLY %s ADD CONSTRAINT", tablename)
+	constraints := make([]string, 0)
+	primaries := make([]string, 0)
+	for _, con := range primaryunique {
+		if con.IsUnique && !con.IsPrimary{
+			uniqueStr := fmt.Sprintf("%s %s_%s_key UNIQUE (%s)", alterStr, tablename, con.AttName, con.AttName)
+			constraints = append(constraints, uniqueStr)
+		}
+		if con.IsPrimary {
+			primaries = append(primaries, con.AttName)
+		}
+	}
+	if len(primaries) > 0 {
+		primaryStr := fmt.Sprintf("%s %s_pkey PRIMARY KEY (%s)", alterStr, tablename, strings.Join(primaries, ", "))
+		constraints = append(constraints, primaryStr)
+	}
+	return constraints
 }

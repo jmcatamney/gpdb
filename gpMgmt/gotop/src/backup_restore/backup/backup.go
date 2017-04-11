@@ -34,7 +34,9 @@ func DoBackup() {
 	for _, table := range tablenames {
 		tableAtts := GetTableAtts(connection, table.Tablename)
 		tableDefs := GetTableDefs(connection, table.Tablename)
-		PrintCreateTable(os.Stdout, table.Tablename, tableAtts, tableDefs) // TODO: Change to write to file
+		primaryunique := GetPrimaryUniqueConstraints(connection, table.Tablename)
+		PrintCreateTableStatement(os.Stdout, table.Tablename, tableAtts, tableDefs) // TODO: Change to write to file
+		PrintAlterTableStatements(os.Stdout, table.Tablename, primaryunique) // TODO: Change to write to file
 	}
 
 	connection.Commit()

@@ -57,7 +57,7 @@ func NewDBConn(dbname string) *DBConn {
 
 func (dbconn *DBConn) Begin() {
 	if dbconn.Tx != nil {
-		Abort("Cannot begin transation; there is already a transaction in progress")
+		Abort("Cannot begin transaction; there is already a transaction in progress")
 	}
 	var err error
 	dbconn.Tx, err = dbconn.Conn.Beginx()

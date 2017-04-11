@@ -17,7 +17,7 @@ func TestMetadata(t *testing.T) {
 }
 
 var _ = Describe("backup/metadata tests", func() {
-	Describe("PrintCreateTable", func() {
+	Describe("PrintCreateTableStatement", func() {
 		buffer := gbytes.NewBuffer()
 		attsOne := backup.QueryTableAtts{1, "i", false, true, false, "int", sql.NullString{String: "", Valid: false}}
 		attsTwo := backup.QueryTableAtts{2, "j", false, true, false, "character varying(20)", sql.NullString{String: "", Valid: false}}
@@ -33,7 +33,7 @@ var _ = Describe("backup/metadata tests", func() {
 		Context("Table with one column", func() {
 			It("Prints a CREATE TABLE block with one line", func() {
 				atts := []backup.QueryTableAtts{attsOne}
-				backup.PrintCreateTable(buffer, "foo", atts, defsEmpty)
+				backup.PrintCreateTableStatement(buffer, "foo", atts, defsEmpty)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE foo (
 	i int
 );`)
@@ -42,7 +42,7 @@ var _ = Describe("backup/metadata tests", func() {
 		Context("Table with multiple columns", func() {
 			It("Prints a CREATE TABLE block with one line per attribute", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsTwo}
-				backup.PrintCreateTable(buffer, "foo", atts, defsEmpty)
+				backup.PrintCreateTableStatement(buffer, "foo", atts, defsEmpty)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE foo (
 	i int,
 	j character varying(20)
@@ -60,7 +60,7 @@ var _ = Describe("backup/metadata tests", func() {
 		Context("Table with ENCODING", func() {
 			It("Prints a CREATE TABLE block where one line has the given ENCODING and the other has the default ENCODING", func() {
 				atts := []backup.QueryTableAtts{attsOneEnc, attsTwoEnc}
-				backup.PrintCreateTable(buffer, "foo", atts, defsEmpty)
+				backup.PrintCreateTableStatement(buffer, "foo", atts, defsEmpty)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE foo (
 	i int ENCODING(compresstype=none,blocksize=32768,compresslevel=0),
 	j character varying(20) ENCODING(compresstype=zlib,blocksize=65536,compresslevel=1)
@@ -70,7 +70,7 @@ var _ = Describe("backup/metadata tests", func() {
 		Context("Table with NOT NULL", func() {
 			It("Prints a CREATE TABLE block where one line contains NOT NULL", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsNotNull}
-				backup.PrintCreateTable(buffer, "foo", atts, defsEmpty)
+				backup.PrintCreateTableStatement(buffer, "foo", atts, defsEmpty)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE foo (
 	i int,
 	j character varying(20) NOT NULL
@@ -80,7 +80,7 @@ var _ = Describe("backup/metadata tests", func() {
 		Context("Table with NOT NULL and ENCODING", func() {
 			It("Prints a CREATE TABLE block where one line contains both NOT NULL and ENCODING", func() {
 				atts := []backup.QueryTableAtts{attsOneEnc, attsEncNotNull}
-				backup.PrintCreateTable(buffer, "foo", atts, defsEmpty)
+				backup.PrintCreateTableStatement(buffer, "foo", atts, defsEmpty)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE foo (
 	i int ENCODING(compresstype=none,blocksize=32768,compresslevel=0),
 	j character varying(20) NOT NULL ENCODING(compresstype=zlib,blocksize=65536,compresslevel=1)
@@ -91,7 +91,7 @@ var _ = Describe("backup/metadata tests", func() {
 			It("Prints a CREATE TABLE block where one line contains DEFAULT", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsTwo}
 				defs := []backup.QueryTableDefs{defsOne}
-				backup.PrintCreateTable(buffer, "foo", atts, defs)
+				backup.PrintCreateTableStatement(buffer, "foo", atts, defs)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE foo (
 	i int DEFAULT 42,
 	j character varying(20)
@@ -102,7 +102,7 @@ var _ = Describe("backup/metadata tests", func() {
 			It("Prints a CREATE TABLE block where both lines contain DEFAULT", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsTwo}
 				defs := []backup.QueryTableDefs{defsOne, defsTwo}
-				backup.PrintCreateTable(buffer, "foo", atts, defs)
+				backup.PrintCreateTableStatement(buffer, "foo", atts, defs)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE foo (
 	i int DEFAULT 42,
 	j character varying(20) DEFAULT 'bar'::text
@@ -113,7 +113,7 @@ var _ = Describe("backup/metadata tests", func() {
 			It("Prints a CREATE TABLE block where one line contains both DEFAULT and NOT NULL", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsNotNull}
 				defs := []backup.QueryTableDefs{defsTwo}
-				backup.PrintCreateTable(buffer, "foo", atts, defs)
+				backup.PrintCreateTableStatement(buffer, "foo", atts, defs)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE foo (
 	i int,
 	j character varying(20) DEFAULT 'bar'::text NOT NULL
@@ -124,7 +124,7 @@ var _ = Describe("backup/metadata tests", func() {
 			It("Prints a CREATE TABLE block where one line contains both DEFAULT and ENCODING", func() {
 				atts := []backup.QueryTableAtts{attsOneEnc, attsTwoEnc}
 				defs := []backup.QueryTableDefs{defsTwo}
-				backup.PrintCreateTable(buffer, "foo", atts, defs)
+				backup.PrintCreateTableStatement(buffer, "foo", atts, defs)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE foo (
 	i int ENCODING(compresstype=none,blocksize=32768,compresslevel=0),
 	j character varying(20) DEFAULT 'bar'::text ENCODING(compresstype=zlib,blocksize=65536,compresslevel=1)
@@ -135,7 +135,7 @@ var _ = Describe("backup/metadata tests", func() {
 			It("Prints a CREATE TABLE block where one line contains all three of DEFAULT, NOT NULL, and ENCODING", func() {
 				atts := []backup.QueryTableAtts{attsOneEnc, attsEncNotNull}
 				defs := []backup.QueryTableDefs{defsTwo}
-				backup.PrintCreateTable(buffer, "foo", atts, defs)
+				backup.PrintCreateTableStatement(buffer, "foo", atts, defs)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE foo (
 	i int ENCODING(compresstype=none,blocksize=32768,compresslevel=0),
 	j character varying(20) DEFAULT 'bar'::text NOT NULL ENCODING(compresstype=zlib,blocksize=65536,compresslevel=1)
