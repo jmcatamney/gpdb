@@ -34,29 +34,19 @@ func PrintCreateTableStatement(metadataFile io.Writer, tablename string, atts []
 	fmt.Fprintln(metadataFile, ");")
 }
 
-func PrintAlterTableStatements(metadataFile io.Writer, tablename string, primaryunique []QueryPrimaryUniqueConstraint) {
-	constraints := HandlePrimaryUniqueConstraints(tablename, primaryunique)
+func PrintAlterTableStatements(metadataFile io.Writer, tablename string, pkfkunique []QueryPkFkUniqueConstraint) {
+	constraints := HandlePkFkUniqueConstraints(tablename, pkfkunique)
 	for _, cons := range constraints {
 		fmt.Fprintln(metadataFile, cons)
 	}
 }
 
-func HandlePrimaryUniqueConstraints(tablename string, primaryunique []QueryPrimaryUniqueConstraint) []string {
+func HandlePkFkUniqueConstraints(tablename string, pkfkunique []QueryPkFkUniqueConstraint) []string {
 	alterStr := fmt.Sprintf("\n\nALTER TABLE ONLY %s ADD CONSTRAINT", tablename)
 	constraints := make([]string, 0)
-	primaries := make([]string, 0)
-	for _, con := range primaryunique {
-		if con.IsUnique && !con.IsPrimary{
-			uniqueStr := fmt.Sprintf("%s %s_%s_key UNIQUE (%s);", alterStr, tablename, con.AttName, con.AttName)
-			constraints = append(constraints, uniqueStr)
-		}
-		if con.IsPrimary {
-			primaries = append(primaries, con.AttName)
-		}
-	}
-	if len(primaries) > 0 {
-		primaryStr := fmt.Sprintf("%s %s_pkey PRIMARY KEY (%s);", alterStr, tablename, strings.Join(primaries, ", "))
-		constraints = append(constraints, primaryStr)
+	for _, con := range pkfkunique {
+		conStr := fmt.Sprintf("%s %s %s;", alterStr, con.ConName, con.ConDef)
+		constraints = append(constraints, conStr)
 	}
 	return constraints
 }

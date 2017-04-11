@@ -7,7 +7,8 @@ import (
 )
 
 func GetAllDumpableTables(connection *utils.DBConn) []utils.Table {
-	query := `SELECT ALLTABLES.oid, ALLTABLES.schemaname, ALLTABLES.tablename FROM
+	query := `
+SELECT ALLTABLES.oid, ALLTABLES.schemaname, ALLTABLES.tablename FROM
 
 	(SELECT c.oid, n.nspname AS schemaname, c.relname AS tablename FROM pg_class c, pg_namespace n
 	WHERE n.oid = c.relnamespace) as ALLTABLES,
@@ -23,7 +24,7 @@ func GetAllDumpableTables(connection *utils.DBConn) []utils.Table {
 	WHERE x.schemaname = y.schemaname and x.tablename = Y.maxtable and x.partitionlevel != Y.maxlevel)
 	UNION (SELECT distinct schemaname, tablename FROM pg_partitions))) as DATATABLES
 
-WHERE ALLTABLES.schemaname = DATATABLES.schemaname and ALLTABLES.tablename = DATATABLES.tablename AND ALLTABLES.oid not in (select reloid from pg_exttable) AND ALLTABLES.schemaname NOT LIKE 'pg_temp_%';`
+WHERE ALLTABLES.schemaname = DATATABLES.schemaname and ALLTABLES.tablename = DATATABLES.tablename AND ALLTABLES.oid not in (select reloid from pg_exttable) AND ALLTABLES.schemaname NOT LIKE 'pg_temp_%' ORDER BY DATATABLES.schemaname, DATATABLES.tablename;`
 
 	results := make([]utils.Table, 0)
 
@@ -43,7 +44,8 @@ type QueryTableAtts struct {
 }
 
 func GetTableAtts(connection *utils.DBConn, oid uint32) []QueryTableAtts {
-	query := fmt.Sprintf(`SELECT a.attnum,
+	query := fmt.Sprintf(`
+SELECT a.attnum,
 	a.attname,
 	a.attnotnull,
 	a.atthasdef,
@@ -71,7 +73,8 @@ type QueryTableDefs struct {
 }
 
 func GetTableDefs(connection *utils.DBConn, oid uint32) []QueryTableDefs {
-	query := fmt.Sprintf(`SELECT adnum,
+	query := fmt.Sprintf(`
+SELECT adnum,
 	pg_catalog.pg_get_expr(adbin, adrelid) AS defval 
 FROM pg_catalog.pg_attrdef
 WHERE adrelid = %d;`, oid)
@@ -82,31 +85,32 @@ WHERE adrelid = %d;`, oid)
 	return results
 }
 
-type QueryPrimaryUniqueConstraint struct {
-	AttName   string
-	IsPrimary bool
-	IsUnique  bool
+type QueryPkFkUniqueConstraint struct {
+	ConName string
+	ConDef  string
 }
 
-func GetPrimaryUniqueConstraints(connection *utils.DBConn, oid uint32) []QueryPrimaryUniqueConstraint {
+func GetPkFkUniqueConstraints(connection *utils.DBConn, oid uint32) []QueryPkFkUniqueConstraint {
 	/* The following query is not taken from pg_dump, as the pg_dump query gets a lot of information we
 	 * don't need and is relatively slow due to several JOINS, the slowest of which is on pg_depend. This
-	 * query has roughly half the cost according to EXPLAIN and gets us only the information we need.*/
-	query := fmt.Sprintf(`SELECT a.attname,
-	i.indisprimary AS isprimary,
-	i.indisunique AS isunique
-FROM pg_attribute a
+	 * query is based on the queries underlying \d in psql, has roughly half the cost according to EXPLAIN,
+	 * and gets us only the information we need.*/
+	query := fmt.Sprintf(`
+SELECT DISTINCT
+	r.conname,
+	pg_catalog.pg_get_constraintdef(r.oid, TRUE) AS condef
+FROM pg_catalog.pg_constraint r
+JOIN pg_catalog.pg_attribute a
+	ON r.conrelid = a.attrelid
 JOIN (SELECT
-	indrelid,
-	indisprimary,
-	indisunique,
-	unnest(indkey) AS indkey
-FROM pg_index) AS i
-	ON a.attrelid = i.indrelid
-WHERE a.attrelid = %d
-AND a.attnum = i.indkey;`, oid)
+	unnest(conkey) AS un
+FROM pg_constraint) AS keys
+	ON a.attnum = keys.un
+WHERE r.conrelid = %d
+ORDER BY condef;
+`, oid)
 
-	results := make([]QueryPrimaryUniqueConstraint, 0)
+	results := make([]QueryPkFkUniqueConstraint, 0)
 	err := connection.Select(&results, query)
 	utils.CheckError(err)
 	return results
