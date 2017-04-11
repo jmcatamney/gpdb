@@ -36,7 +36,7 @@ var _ = Describe("backup/queries tests", func() {
 			It("Returns a slice containing one QueryTableAtts", func() {
 				fakeResult := sqlmock.NewRows(header).AddRow(rowOne...)
 				mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-				results := backup.GetTableAtts(connection, "foo")
+				results := backup.GetTableAtts(connection, 0)
 				Expect(len(results)).Should(Equal(1))
 				Expect(results[0].AttName).Should(Equal("i"))
 				Expect(results[0].AttHasDef).Should(Equal(false))
@@ -47,7 +47,7 @@ var _ = Describe("backup/queries tests", func() {
 			It("Returns a slice containing one QueryTableAtts per attribute", func() {
 				fakeResult := sqlmock.NewRows(header).AddRow(rowOne...).AddRow(rowTwo...)
 				mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-				results := backup.GetTableAtts(connection, "foo")
+				results := backup.GetTableAtts(connection, 0)
 				Expect(len(results)).Should(Equal(2))
 				Expect(results[0].AttName).Should(Equal("i"))
 				Expect(results[0].AttTypName).Should(Equal("int"))
@@ -59,7 +59,7 @@ var _ = Describe("backup/queries tests", func() {
 			It("Returns a slice containing one QueryTableAtts with a non-NULL AttEncoding value", func() {
 				fakeResult := sqlmock.NewRows(header).AddRow(rowOne...).AddRow(rowEncoded...)
 				mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-				results := backup.GetTableAtts(connection, "foo")
+				results := backup.GetTableAtts(connection, 0)
 				Expect(len(results)).Should(Equal(2))
 				Expect(results[0].AttName).Should(Equal("i"))
 				Expect(results[0].AttEncoding.Valid).Should(Equal(false))
@@ -72,7 +72,7 @@ var _ = Describe("backup/queries tests", func() {
 			It("Returns a slice containing one QueryTableAtts with AttNotNull set to True", func() {
 				fakeResult := sqlmock.NewRows(header).AddRow(rowOne...).AddRow(rowNotNull...)
 				mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-				results := backup.GetTableAtts(connection, "foo")
+				results := backup.GetTableAtts(connection, 0)
 				Expect(len(results)).Should(Equal(2))
 				Expect(results[0].AttName).Should(Equal("i"))
 				Expect(results[0].AttEncoding.Valid).Should(Equal(false))
@@ -84,7 +84,7 @@ var _ = Describe("backup/queries tests", func() {
 			It("Panics", func() {
 				mock.ExpectQuery("SELECT (.*)").WillReturnError(errors.New("relation \"foo\" does not exist"))
 				defer testutils.ShouldPanicWithMessage("relation \"foo\" does not exist")
-				backup.GetTableAtts(connection, "foo")
+				backup.GetTableAtts(connection, 0)
 			})
 		})
 	})
@@ -100,7 +100,7 @@ var _ = Describe("backup/queries tests", func() {
 			It("Returns a slice containing one QueryTableAtts", func() {
 				fakeResult := sqlmock.NewRows(header).AddRow(rowOne...)
 				mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-				results := backup.GetTableDefs(connection, "foo")
+				results := backup.GetTableDefs(connection, 0)
 				Expect(len(results)).Should(Equal(1))
 				Expect(results[0].AdNum).Should(Equal(1))
 				Expect(results[0].DefVal).Should(Equal("42"))
@@ -110,7 +110,7 @@ var _ = Describe("backup/queries tests", func() {
 			It("Returns a slice containing one QueryTableAtts", func() {
 				fakeResult := sqlmock.NewRows(header).AddRow(rowOne...).AddRow(rowTwo...)
 				mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-				results := backup.GetTableDefs(connection, "foo")
+				results := backup.GetTableDefs(connection, 0)
 				Expect(len(results)).Should(Equal(2))
 				Expect(results[0].AdNum).Should(Equal(1))
 				Expect(results[0].DefVal).Should(Equal("42"))
@@ -122,7 +122,7 @@ var _ = Describe("backup/queries tests", func() {
 			It("Returns a slice containing one QueryTableAtts", func() {
 				fakeResult := sqlmock.NewRows(header)
 				mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-				results := backup.GetTableDefs(connection, "foo")
+				results := backup.GetTableDefs(connection, 0)
 				Expect(len(results)).Should(Equal(0))
 			})
 		})

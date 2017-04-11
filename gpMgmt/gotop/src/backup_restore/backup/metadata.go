@@ -7,7 +7,7 @@ import (
 )
 
 func PrintCreateTableStatement(metadataFile io.Writer, tablename string, atts []QueryTableAtts, defs []QueryTableDefs) {
-	fmt.Fprintf(metadataFile, "CREATE TABLE %s (\n", tablename)
+	fmt.Fprintf(metadataFile, "\n\nCREATE TABLE %s (\n", tablename)
 	lines := make([]string, 0)
 	for _, att := range atts {
 		if !att.AttIsDropped {
@@ -40,7 +40,7 @@ func PrintAlterTableStatements(metadataFile io.Writer, tablename string, primary
 }
 
 func HandlePrimaryUniqueConstraints(tablename string, primaryunique []QueryPrimaryUniqueConstraint) []string {
-	alterStr := fmt.Sprintf("ALTER TABLE ONLY %s ADD CONSTRAINT", tablename)
+	alterStr := fmt.Sprintf("\n\nALTER TABLE ONLY %s ADD CONSTRAINT", tablename)
 	constraints := make([]string, 0)
 	primaries := make([]string, 0)
 	for _, con := range primaryunique {

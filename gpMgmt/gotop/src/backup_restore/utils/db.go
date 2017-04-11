@@ -23,8 +23,13 @@ type DBConn struct {
 }
 
 type Table struct {
-	Schema string
-	Table  string
+	Oid        uint32
+	Schemaname string
+	Tablename  string
+}
+
+func (table Table) ToFQN() string {
+	return fmt.Sprintf("%s.%s", table.Schemaname, table.Tablename); // TODO: handle special character escaping here
 }
 
 func NewDBConn(dbname string) *DBConn {

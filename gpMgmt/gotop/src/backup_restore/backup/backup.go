@@ -26,15 +26,11 @@ func DoBackup() {
 
 	connection.Begin()
 
-	tablenames := make([]struct {
-		Tablename string
-	}, 0)
-	err := connection.Select(&tablenames, "SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
-	utils.CheckError(err)
-	for _, table := range tablenames {
-		tableAtts := GetTableAtts(connection, table.Tablename)
-		tableDefs := GetTableDefs(connection, table.Tablename)
-		primaryunique := GetPrimaryUniqueConstraints(connection, table.Tablename)
+	tables := GetAllDumpableTables(connection)
+	for _, table := range tables {
+		tableAtts := GetTableAtts(connection, table.Oid)
+		tableDefs := GetTableDefs(connection, table.Oid)
+		primaryunique := GetPrimaryUniqueConstraints(connection, table.Oid)
 		PrintCreateTableStatement(os.Stdout, table.Tablename, tableAtts, tableDefs) // TODO: Change to write to file
 		PrintAlterTableStatements(os.Stdout, table.Tablename, primaryunique) // TODO: Change to write to file
 	}
