@@ -47,7 +47,7 @@ func HandlePrimaryUniqueConstraints(tablename string, primaryunique []QueryPrima
 	primaries := make([]string, 0)
 	for _, con := range primaryunique {
 		if con.IsUnique && !con.IsPrimary{
-			uniqueStr := fmt.Sprintf("%s %s_%s_key UNIQUE (%s)", alterStr, tablename, con.AttName, con.AttName)
+			uniqueStr := fmt.Sprintf("%s %s_%s_key UNIQUE (%s);", alterStr, tablename, con.AttName, con.AttName)
 			constraints = append(constraints, uniqueStr)
 		}
 		if con.IsPrimary {
@@ -55,7 +55,7 @@ func HandlePrimaryUniqueConstraints(tablename string, primaryunique []QueryPrima
 		}
 	}
 	if len(primaries) > 0 {
-		primaryStr := fmt.Sprintf("%s %s_pkey PRIMARY KEY (%s)", alterStr, tablename, strings.Join(primaries, ", "))
+		primaryStr := fmt.Sprintf("%s %s_pkey PRIMARY KEY (%s);", alterStr, tablename, strings.Join(primaries, ", "))
 		constraints = append(constraints, primaryStr)
 	}
 	return constraints
