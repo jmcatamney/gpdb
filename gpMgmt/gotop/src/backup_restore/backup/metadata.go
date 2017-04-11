@@ -28,7 +28,9 @@ func PrintCreateTableStatement(metadataFile io.Writer, tablename string, atts []
 			lines = append(lines, line)
 		}
 	}
-	fmt.Fprintln(metadataFile, strings.Join(lines, ",\n"))
+	if len(lines) > 0 {
+		fmt.Fprintln(metadataFile, strings.Join(lines, ",\n"))
+	}
 	fmt.Fprintln(metadataFile, ");")
 }
 

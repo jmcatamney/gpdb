@@ -21,6 +21,7 @@ var _ = Describe("backup/metadata tests", func() {
 		buffer := gbytes.NewBuffer()
 		attsOne := backup.QueryTableAtts{1, "i", false, true, false, "int", sql.NullString{String: "", Valid: false}}
 		attsTwo := backup.QueryTableAtts{2, "j", false, true, false, "character varying(20)", sql.NullString{String: "", Valid: false}}
+		attsDropped := backup.QueryTableAtts{2, "j", false, true, true, "character varying(20)", sql.NullString{String: "", Valid: false}}
 		attsOneEnc := backup.QueryTableAtts{1, "i", false, false, false, "int", sql.NullString{String: "compresstype=none,blocksize=32768,compresslevel=0", Valid: true}}
 		attsTwoEnc := backup.QueryTableAtts{2, "j", false, true, false, "character varying(20)", sql.NullString{String: "compresstype=zlib,blocksize=65536,compresslevel=1", Valid: true}}
 		attsNotNull := backup.QueryTableAtts{2, "j", true, true, false, "character varying(20)", sql.NullString{String: "", Valid: false}}
@@ -47,8 +48,17 @@ var _ = Describe("backup/metadata tests", func() {
 );`)
 			})
 			It("prints a CREATE TABLE block with no attributes", func() {
+				atts := []backup.QueryTableAtts{}
+				backup.PrintCreateTableStatement(buffer, "foo", atts, defsEmpty)
+				testutils.ExpectRegexp(buffer, `CREATE TABLE foo (
+);`)
 			})
 			It("prints a CREATE TABLE block without a dropped attribute", func() {
+				atts := []backup.QueryTableAtts{attsOne, attsDropped}
+				backup.PrintCreateTableStatement(buffer, "foo", atts, defsEmpty)
+				testutils.ExpectRegexp(buffer, `CREATE TABLE foo (
+	i int
+);`)
 			})
 		})
 		Context("One special table attribute", func() {
