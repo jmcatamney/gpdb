@@ -28,21 +28,27 @@ var _ = Describe("backup/metadata tests", func() {
 
 		defsOne := backup.QueryTableDefs{1, "42"}
 		defsTwo := backup.QueryTableDefs{2, "'bar'::text"}
-
 		defsEmpty := []backup.QueryTableDefs{}
-		distStr := "DISTRIBUTED RANDOMLY"
+
+		distRandom := "DISTRIBUTED RANDOMLY"
+		distSingle := "DISTRIBUTED BY (i)"
+		distComposite := "DISTRIBUTED BY (i, j)"
+
+		heapDef := ""
+		aoDef := "(appendonly=true)"
+		coDef := "(appendonly=true, orientation=column)"
 
 		Context("No special table attributes", func() {
 			It("prints a CREATE TABLE block with one line", func() {
 				atts := []backup.QueryTableAtts{attsOne}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distStr)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, heapDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int
 ) DISTRIBUTED RANDOMLY;`)
 			})
 			It("prints a CREATE TABLE block with one line per attribute", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distStr)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, heapDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int,
 	j character varying(20)
@@ -50,13 +56,13 @@ var _ = Describe("backup/metadata tests", func() {
 			})
 			It("prints a CREATE TABLE block with no attributes", func() {
 				atts := []backup.QueryTableAtts{}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distStr)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, heapDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 ) DISTRIBUTED RANDOMLY;`)
 			})
 			It("prints a CREATE TABLE block without a dropped attribute", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsDropped}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distStr)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, heapDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int
 ) DISTRIBUTED RANDOMLY;`)
@@ -65,15 +71,15 @@ var _ = Describe("backup/metadata tests", func() {
 		Context("One special table attribute", func() {
 			It("prints a CREATE TABLE block where one line has the given ENCODING and the other has the default ENCODING", func() {
 				atts := []backup.QueryTableAtts{attsOneEnc, attsTwoEnc}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distStr)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, heapDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
-	i int ENCODING(compresstype=none,blocksize=32768,compresslevel=0),
-	j character varying(20) ENCODING(compresstype=zlib,blocksize=65536,compresslevel=1)
+	i int ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+	j character varying(20) ENCODING (compresstype=zlib,blocksize=65536,compresslevel=1)
 ) DISTRIBUTED RANDOMLY;`)
 			})
 			It("prints a CREATE TABLE block where one line contains NOT NULL", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsNotNull}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distStr)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, heapDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int,
 	j character varying(20) NOT NULL
@@ -82,7 +88,7 @@ var _ = Describe("backup/metadata tests", func() {
 			It("prints a CREATE TABLE block where one line contains DEFAULT", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsTwo}
 				defs := []backup.QueryTableDefs{defsOne}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defs, distStr)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defs, distRandom, heapDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int DEFAULT 42,
 	j character varying(20)
@@ -91,7 +97,7 @@ var _ = Describe("backup/metadata tests", func() {
 			It("prints a CREATE TABLE block where both lines contain DEFAULT", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsTwo}
 				defs := []backup.QueryTableDefs{defsOne, defsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defs, distStr)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defs, distRandom, heapDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int DEFAULT 42,
 	j character varying(20) DEFAULT 'bar'::text
@@ -101,16 +107,16 @@ var _ = Describe("backup/metadata tests", func() {
 		Context("Multiple special table attributes on one column", func() {
 			It("prints a CREATE TABLE block where one line contains both NOT NULL and ENCODING", func() {
 				atts := []backup.QueryTableAtts{attsOneEnc, attsEncNotNull}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distStr)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, heapDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
-	i int ENCODING(compresstype=none,blocksize=32768,compresslevel=0),
-	j character varying(20) NOT NULL ENCODING(compresstype=zlib,blocksize=65536,compresslevel=1)
+	i int ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+	j character varying(20) NOT NULL ENCODING (compresstype=zlib,blocksize=65536,compresslevel=1)
 ) DISTRIBUTED RANDOMLY;`)
 			})
 			It("prints a CREATE TABLE block where one line contains both DEFAULT and NOT NULL", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsNotNull}
 				defs := []backup.QueryTableDefs{defsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defs, distStr)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defs, distRandom, heapDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int,
 	j character varying(20) DEFAULT 'bar'::text NOT NULL
@@ -119,120 +125,199 @@ var _ = Describe("backup/metadata tests", func() {
 			It("prints a CREATE TABLE block where one line contains both DEFAULT and ENCODING", func() {
 				atts := []backup.QueryTableAtts{attsOneEnc, attsTwoEnc}
 				defs := []backup.QueryTableDefs{defsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defs, distStr)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defs, distRandom, heapDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
-	i int ENCODING(compresstype=none,blocksize=32768,compresslevel=0),
-	j character varying(20) DEFAULT 'bar'::text ENCODING(compresstype=zlib,blocksize=65536,compresslevel=1)
+	i int ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+	j character varying(20) DEFAULT 'bar'::text ENCODING (compresstype=zlib,blocksize=65536,compresslevel=1)
 ) DISTRIBUTED RANDOMLY;`)
 			})
 			It("prints a CREATE TABLE block where one line contains all three of DEFAULT, NOT NULL, and ENCODING", func() {
 				atts := []backup.QueryTableAtts{attsOneEnc, attsEncNotNull}
 				defs := []backup.QueryTableDefs{defsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defs, distStr)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defs, distRandom, heapDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
-	i int ENCODING(compresstype=none,blocksize=32768,compresslevel=0),
-	j character varying(20) DEFAULT 'bar'::text NOT NULL ENCODING(compresstype=zlib,blocksize=65536,compresslevel=1)
+	i int ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
+	j character varying(20) DEFAULT 'bar'::text NOT NULL ENCODING (compresstype=zlib,blocksize=65536,compresslevel=1)
 ) DISTRIBUTED RANDOMLY;`)
 			})
 		})
+		Context("Table qualities (distribution keys and table type)", func() {
+			It("has a single-column distribution key", func() {
+				atts := []backup.QueryTableAtts{attsOne, attsTwo}
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distSingle, heapDef)
+				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
+	i int,
+	j character varying(20)
+) DISTRIBUTED BY (i);`)
+			})
+			It("has a multiple-column composite distribution key", func() {
+				atts := []backup.QueryTableAtts{attsOne, attsTwo}
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distComposite, heapDef)
+				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
+	i int,
+	j character varying(20)
+) DISTRIBUTED BY (i, j);`)
+			})
+			It("is an append-optimized table", func() {
+				atts := []backup.QueryTableAtts{attsOne, attsTwo}
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, aoDef)
+				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
+	i int,
+	j character varying(20)
+) WITH (appendonly=true) DISTRIBUTED RANDOMLY;`)
+			})
+			It("is an append-optimized table with a single-column distribution key", func() {
+				atts := []backup.QueryTableAtts{attsOne, attsTwo}
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distSingle, aoDef)
+				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
+	i int,
+	j character varying(20)
+) WITH (appendonly=true) DISTRIBUTED BY (i);`)
+			})
+			It("is an append-optimized table with a two-column composite distribution key", func() {
+				atts := []backup.QueryTableAtts{attsOne, attsTwo}
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distComposite, aoDef)
+				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
+	i int,
+	j character varying(20)
+) WITH (appendonly=true) DISTRIBUTED BY (i, j);`)
+			})
+			It("is an append-optimized column-oriented table", func() {
+				atts := []backup.QueryTableAtts{attsOne, attsTwo}
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, coDef)
+				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
+	i int,
+	j character varying(20)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;`)
+			})
+			It("is an append-optimized column-oriented table with a single-column distribution key", func() {
+				atts := []backup.QueryTableAtts{attsOne, attsTwo}
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distSingle, coDef)
+				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
+	i int,
+	j character varying(20)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED BY (i);`)
+			})
+			It("is an append-optimized column-oriented table with a two-column composite distribution key", func() {
+				atts := []backup.QueryTableAtts{attsOne, attsTwo}
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distComposite, coDef)
+				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
+	i int,
+	j character varying(20)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED BY (i, j);`)
+			})
+		})
 	})
-	Describe("HandleConstraints", func() {
-		uniqueOne := backup.QueryConstraint{"tablename_i_key", "UNIQUE (i)"}
-		uniqueTwo := backup.QueryConstraint{"tablename_j_key", "UNIQUE (j)"}
-		primarySingle := backup.QueryConstraint{"tablename_pkey", "PRIMARY KEY (i)"}
-		primaryComposite := backup.QueryConstraint{"tablename_pkey", "PRIMARY KEY (i, j)"}
-		foreignOne := backup.QueryConstraint{"tablename_i_fkey", "FOREIGN KEY (i) REFERENCES other_tablename(a)"}
-		foreignTwo := backup.QueryConstraint{"tablename_j_fkey", "FOREIGN KEY (j) REFERENCES other_tablename(b)"}
+	Describe("ProcessConstraints", func() {
+		uniqueOne := backup.QueryConstraint{"tablename_i_key", "u", "UNIQUE (i)"}
+		uniqueTwo := backup.QueryConstraint{"tablename_j_key", "u", "UNIQUE (j)"}
+		primarySingle := backup.QueryConstraint{"tablename_pkey", "p", "PRIMARY KEY (i)"}
+		primaryComposite := backup.QueryConstraint{"tablename_pkey", "p", "PRIMARY KEY (i, j)"}
+		foreignOne := backup.QueryConstraint{"tablename_i_fkey", "f", "FOREIGN KEY (i) REFERENCES other_tablename(a)"}
+		foreignTwo := backup.QueryConstraint{"tablename_j_fkey", "f", "FOREIGN KEY (j) REFERENCES other_tablename(b)"}
 
 		Context("No ALTER TABLE statements", func() {
 			It("returns an empty slice", func() {
-				cons := []backup.QueryConstraint{}
-				constraints := backup.HandleConstraints("tablename", cons)
-				Expect(len(constraints)).To(Equal(0))
+				constraints := []backup.QueryConstraint{}
+				cons, fkCons := backup.ProcessConstraints("tablename", constraints)
+				Expect(len(cons)).To(Equal(0))
+				Expect(len(fkCons)).To(Equal(0))
 			})
 		})
 		Context("ALTER TABLE statements involving different columns", func() {
 			It("returns a slice containing one UNIQUE constraint", func() {
-				cons := []backup.QueryConstraint{uniqueOne}
-				constraints := backup.HandleConstraints("tablename", cons)
-				Expect(len(constraints)).To(Equal(1))
-				Expect(constraints[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_i_key UNIQUE (i);"))
+				constraints := []backup.QueryConstraint{uniqueOne}
+				cons, fkCons := backup.ProcessConstraints("tablename", constraints)
+				Expect(len(cons)).To(Equal(1))
+				Expect(len(fkCons)).To(Equal(0))
+				Expect(cons[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_i_key UNIQUE (i);"))
 			})
 			It("returns a slice containing two UNIQUE constraints", func() {
-				cons := []backup.QueryConstraint{uniqueOne, uniqueTwo}
-				constraints := backup.HandleConstraints("tablename", cons)
-				Expect(len(constraints)).To(Equal(2))
-				Expect(constraints[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_i_key UNIQUE (i);"))
-				Expect(constraints[1]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_j_key UNIQUE (j);"))
+				constraints := []backup.QueryConstraint{uniqueOne, uniqueTwo}
+				cons, fkCons := backup.ProcessConstraints("tablename", constraints)
+				Expect(len(cons)).To(Equal(2))
+				Expect(len(fkCons)).To(Equal(0))
+				Expect(cons[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_i_key UNIQUE (i);"))
+				Expect(cons[1]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_j_key UNIQUE (j);"))
 			})
 			It("returns a slice containing PRIMARY KEY constraint on one column", func() {
-				cons := []backup.QueryConstraint{primarySingle}
-				constraints := backup.HandleConstraints("tablename", cons)
-				Expect(len(constraints)).To(Equal(1))
-				Expect(constraints[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_pkey PRIMARY KEY (i);"))
+				constraints := []backup.QueryConstraint{primarySingle}
+				cons, fkCons := backup.ProcessConstraints("tablename", constraints)
+				Expect(len(cons)).To(Equal(1))
+				Expect(len(fkCons)).To(Equal(0))
+				Expect(cons[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_pkey PRIMARY KEY (i);"))
 			})
 			It("returns a slice containing composite PRIMARY KEY constraint on two columns", func() {
-				cons := []backup.QueryConstraint{primaryComposite}
-				constraints := backup.HandleConstraints("tablename", cons)
-				Expect(len(constraints)).To(Equal(1))
-				Expect(constraints[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_pkey PRIMARY KEY (i, j);"))
+				constraints := []backup.QueryConstraint{primaryComposite}
+				cons, fkCons := backup.ProcessConstraints("tablename", constraints)
+				Expect(len(cons)).To(Equal(1))
+				Expect(len(fkCons)).To(Equal(0))
+				Expect(cons[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_pkey PRIMARY KEY (i, j);"))
 			})
 			It("returns a slice containing one FOREIGN KEY constraint", func() {
-				cons := []backup.QueryConstraint{foreignOne}
-				constraints := backup.HandleConstraints("tablename", cons)
-				Expect(len(constraints)).To(Equal(1))
-				Expect(constraints[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_i_fkey FOREIGN KEY (i) REFERENCES other_tablename(a);"))
+				constraints := []backup.QueryConstraint{foreignOne}
+				cons, fkCons := backup.ProcessConstraints("tablename", constraints)
+				Expect(len(cons)).To(Equal(0))
+				Expect(len(fkCons)).To(Equal(1))
+				Expect(fkCons[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_i_fkey FOREIGN KEY (i) REFERENCES other_tablename(a);"))
 			})
 			It("returns a slice containing two FOREIGN KEY constraints", func() {
-				cons := []backup.QueryConstraint{foreignOne, foreignTwo}
-				constraints := backup.HandleConstraints("tablename", cons)
-				Expect(len(constraints)).To(Equal(2))
-				Expect(constraints[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_i_fkey FOREIGN KEY (i) REFERENCES other_tablename(a);"))
-				Expect(constraints[1]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_j_fkey FOREIGN KEY (j) REFERENCES other_tablename(b);"))
+				constraints := []backup.QueryConstraint{foreignOne, foreignTwo}
+				cons, fkCons := backup.ProcessConstraints("tablename", constraints)
+				Expect(len(cons)).To(Equal(0))
+				Expect(len(fkCons)).To(Equal(2))
+				Expect(fkCons[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_i_fkey FOREIGN KEY (i) REFERENCES other_tablename(a);"))
+				Expect(fkCons[1]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_j_fkey FOREIGN KEY (j) REFERENCES other_tablename(b);"))
 			})
 			It("returns a slice containing one UNIQUE constraint and one FOREIGN KEY constraint", func() {
-				cons := []backup.QueryConstraint{uniqueOne, foreignTwo}
-				constraints := backup.HandleConstraints("tablename", cons)
-				Expect(len(constraints)).To(Equal(2))
-				Expect(constraints[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_i_key UNIQUE (i);"))
-				Expect(constraints[1]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_j_fkey FOREIGN KEY (j) REFERENCES other_tablename(b);"))
+				constraints := []backup.QueryConstraint{uniqueOne, foreignTwo}
+				cons, fkCons := backup.ProcessConstraints("tablename", constraints)
+				Expect(len(cons)).To(Equal(1))
+				Expect(len(fkCons)).To(Equal(1))
+				Expect(cons[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_i_key UNIQUE (i);"))
+				Expect(fkCons[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_j_fkey FOREIGN KEY (j) REFERENCES other_tablename(b);"))
 			})
 			It("returns a slice containing one PRIMARY KEY constraint and one FOREIGN KEY constraint", func() {
-				cons := []backup.QueryConstraint{primarySingle, foreignTwo}
-				constraints := backup.HandleConstraints("tablename", cons)
-				Expect(len(constraints)).To(Equal(2))
-				Expect(constraints[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_pkey PRIMARY KEY (i);"))
-				Expect(constraints[1]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_j_fkey FOREIGN KEY (j) REFERENCES other_tablename(b);"))
+				constraints := []backup.QueryConstraint{primarySingle, foreignTwo}
+				cons, fkCons := backup.ProcessConstraints("tablename", constraints)
+				Expect(len(cons)).To(Equal(1))
+				Expect(len(fkCons)).To(Equal(1))
+				Expect(cons[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_pkey PRIMARY KEY (i);"))
+				Expect(fkCons[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_j_fkey FOREIGN KEY (j) REFERENCES other_tablename(b);"))
 			})
 			It("returns a slice containing a two-column composite PRIMARY KEY constraint and one FOREIGN KEY constraint", func() {
-				cons := []backup.QueryConstraint{primaryComposite, foreignTwo}
-				constraints := backup.HandleConstraints("tablename", cons)
-				Expect(len(constraints)).To(Equal(2))
-				Expect(constraints[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_pkey PRIMARY KEY (i, j);"))
-				Expect(constraints[1]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_j_fkey FOREIGN KEY (j) REFERENCES other_tablename(b);"))
+				constraints := []backup.QueryConstraint{primaryComposite, foreignTwo}
+				cons, fkCons := backup.ProcessConstraints("tablename", constraints)
+				Expect(len(cons)).To(Equal(1))
+				Expect(len(fkCons)).To(Equal(1))
+				Expect(cons[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_pkey PRIMARY KEY (i, j);"))
+				Expect(fkCons[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_j_fkey FOREIGN KEY (j) REFERENCES other_tablename(b);"))
 			})
 		})
 		Context("ALTER TABLE statements involving the same column", func() {
 			It("returns a slice containing one UNIQUE constraint and one FOREIGN KEY constraint", func() {
-				cons := []backup.QueryConstraint{uniqueOne, foreignOne}
-				constraints := backup.HandleConstraints("tablename", cons)
-				Expect(len(constraints)).To(Equal(2))
-				Expect(constraints[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_i_key UNIQUE (i);"))
-				Expect(constraints[1]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_i_fkey FOREIGN KEY (i) REFERENCES other_tablename(a);"))
+				constraints := []backup.QueryConstraint{uniqueOne, foreignOne}
+				cons, fkCons := backup.ProcessConstraints("tablename", constraints)
+				Expect(len(cons)).To(Equal(1))
+				Expect(len(fkCons)).To(Equal(1))
+				Expect(cons[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_i_key UNIQUE (i);"))
+				Expect(fkCons[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_i_fkey FOREIGN KEY (i) REFERENCES other_tablename(a);"))
 			})
 			It("returns a slice containing one PRIMARY KEY constraint and one FOREIGN KEY constraint", func() {
-				cons := []backup.QueryConstraint{primarySingle, foreignOne}
-				constraints := backup.HandleConstraints("tablename", cons)
-				Expect(len(constraints)).To(Equal(2))
-				Expect(constraints[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_pkey PRIMARY KEY (i);"))
-				Expect(constraints[1]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_i_fkey FOREIGN KEY (i) REFERENCES other_tablename(a);"))
+				constraints := []backup.QueryConstraint{primarySingle, foreignOne}
+				cons, fkCons := backup.ProcessConstraints("tablename", constraints)
+				Expect(len(cons)).To(Equal(1))
+				Expect(len(fkCons)).To(Equal(1))
+				Expect(cons[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_pkey PRIMARY KEY (i);"))
+				Expect(fkCons[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_i_fkey FOREIGN KEY (i) REFERENCES other_tablename(a);"))
 			})
 			It("returns a slice containing a two-column composite PRIMARY KEY constraint and one FOREIGN KEY constraint", func() {
-				cons := []backup.QueryConstraint{primaryComposite, foreignOne}
-				constraints := backup.HandleConstraints("tablename", cons)
-				Expect(len(constraints)).To(Equal(2))
-				Expect(constraints[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_pkey PRIMARY KEY (i, j);"))
-				Expect(constraints[1]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_i_fkey FOREIGN KEY (i) REFERENCES other_tablename(a);"))
+				constraints := []backup.QueryConstraint{primaryComposite, foreignOne}
+				cons, fkCons := backup.ProcessConstraints("tablename", constraints)
+				Expect(len(cons)).To(Equal(1))
+				Expect(len(fkCons)).To(Equal(1))
+				Expect(cons[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_pkey PRIMARY KEY (i, j);"))
+				Expect(fkCons[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_i_fkey FOREIGN KEY (i) REFERENCES other_tablename(a);"))
 			})
 		})
 	})

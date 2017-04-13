@@ -88,6 +88,7 @@ WHERE adrelid = %d;`, oid)
 
 type QueryConstraint struct {
 	ConName string
+	ConType string
 	ConDef  string
 }
 
@@ -99,6 +100,7 @@ func GetConstraints(connection *utils.DBConn, oid uint32) []QueryConstraint {
 	query := fmt.Sprintf(`
 SELECT
 	conname,
+	contype,
 	pg_catalog.pg_get_constraintdef(oid, TRUE) AS condef
 FROM pg_catalog.pg_constraint
 WHERE conrelid = %d;
@@ -138,4 +140,28 @@ WHERE a.attrelid = %d;`, oid)
 		}
 		return fmt.Sprintf("DISTRIBUTED BY (%s)", strings.Join(distCols, ", "))
 	}
+}
+
+type QueryAOCODef struct {
+	IsCO bool
+}
+
+func GetAOCODefinition(connection *utils.DBConn, oid uint32) string {
+	query := fmt.Sprintf(`
+SELECT columnstore AS isco 
+FROM pg_appendonly
+WHERE relid = %d;`, oid)
+	results := make([]QueryAOCODef, 0)
+	err := connection.Select(&results, query)
+	utils.CheckError(err)
+	if len(results) == 1{
+		if !results[0].IsCO { // Append-Optimized table
+			return "(appendonly=true)"
+		} else { // Append-Optimized Column-Oriented table
+			return "(appendonly=true, orientation=column)"
+		}
+	} else if len(results) > 1 {
+		utils.Abort("Too many rows returned from query on pg_appendonly: got %d rows, expected 1 row", len(results))
+	}
+	return ""// Heap table
 }

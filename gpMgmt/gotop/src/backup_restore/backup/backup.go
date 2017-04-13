@@ -21,22 +21,28 @@ func DoSetup() {
 }
 
 func DoBackup() {
-	fmt.Println("The current time is", utils.CurrentTimestamp())
-	fmt.Printf("Database %s is %s\n", connection.DBName, connection.GetDBSize())
+	fmt.Println("-- The current time is", utils.CurrentTimestamp())
+	fmt.Printf("-- Database %s is %s\n", connection.DBName, connection.GetDBSize())
 
 	connection.Begin()
 
+	allConstraints := make([]string, 0)
+	allFkConstraints := make([]string, 0) // Slice for FOREIGN KEY allConstraints, since they must be printed after PRIMARY KEY allConstraints
 	tables := GetAllDumpableTables(connection)
 	for _, table := range tables {
 		tableAtts := GetTableAtts(connection, table.Oid)
 		tableDefs := GetTableDefs(connection, table.Oid)
 		distPolicy := GetDistributionPolicy(connection, table.Oid)
-		PrintCreateTableStatement(os.Stdout, table.Tablename, tableAtts, tableDefs, distPolicy) // TODO: Change to write to file
+		aocoDef := GetAOCODefinition(connection, table.Oid)
+		PrintCreateTableStatement(os.Stdout, table.Tablename, tableAtts, tableDefs, distPolicy, aocoDef) // TODO: Change to write to file
 	}
 	for _, table := range tables {
-		constraints := GetConstraints(connection, table.Oid)
-		PrintAlterTableStatements(os.Stdout, table.Tablename, constraints) // TODO: Change to write to file
+		conList := GetConstraints(connection, table.Oid)
+		tableCons, tableFkCons := ProcessConstraints(table.Tablename, conList)
+		allConstraints = append(allConstraints, tableCons...)
+		allFkConstraints = append(allFkConstraints, tableFkCons...)
 	}
+	PrintConstraintStatements(os.Stdout, allConstraints, allFkConstraints) // TODO: Change to write to file
 
 	connection.Commit()
 }

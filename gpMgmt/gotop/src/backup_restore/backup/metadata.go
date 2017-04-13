@@ -3,10 +3,11 @@ package backup
 import (
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 )
 
-func PrintCreateTableStatement(metadataFile io.Writer, tablename string, atts []QueryTableAtts, defs []QueryTableDefs, distPolicy string) {
+func PrintCreateTableStatement(metadataFile io.Writer, tablename string, atts []QueryTableAtts, defs []QueryTableDefs, distPolicy string, aocoDef string) {
 	fmt.Fprintf(metadataFile, "\n\nCREATE TABLE %s (\n", tablename)
 	lines := make([]string, 0)
 	for _, att := range atts {
@@ -23,7 +24,7 @@ func PrintCreateTableStatement(metadataFile io.Writer, tablename string, atts []
 				line += " NOT NULL"
 			}
 			if att.AttEncoding.Valid {
-				line += fmt.Sprintf(" ENCODING(%s)", att.AttEncoding.String)
+				line += fmt.Sprintf(" ENCODING (%s)", att.AttEncoding.String)
 			}
 			lines = append(lines, line)
 		}
@@ -31,22 +32,35 @@ func PrintCreateTableStatement(metadataFile io.Writer, tablename string, atts []
 	if len(lines) > 0 {
 		fmt.Fprintln(metadataFile, strings.Join(lines, ",\n"))
 	}
-	fmt.Fprintf(metadataFile, ") %s;\n", distPolicy)
+	fmt.Fprintf(metadataFile, ") ")
+	if aocoDef != "" {
+		fmt.Fprintf(metadataFile, "WITH %s ", aocoDef)
+	}
+	fmt.Fprintf(metadataFile, "%s;\n", distPolicy)
 }
 
-func PrintAlterTableStatements(metadataFile io.Writer, tablename string, constraint []QueryConstraint) {
-	constraints := HandleConstraints(tablename, constraint)
-	for _, cons := range constraints {
-		fmt.Fprintln(metadataFile, cons)
+func PrintConstraintStatements(metadataFile io.Writer, cons []string, fkCons []string) {
+	sort.Strings(cons)
+	sort.Strings(fkCons)
+	for _, con := range cons {
+		fmt.Fprintln(metadataFile, con)
+	}
+	for _, con := range fkCons {
+		fmt.Fprintln(metadataFile, con)
 	}
 }
 
-func HandleConstraints(tablename string, constraint []QueryConstraint) []string {
+func ProcessConstraints(tablename string, constraints []QueryConstraint) ([]string, []string) {
 	alterStr := fmt.Sprintf("\n\nALTER TABLE ONLY %s ADD CONSTRAINT", tablename)
-	constraints := make([]string, 0)
-	for _, con := range constraint {
-		conStr := fmt.Sprintf("%s %s %s;", alterStr, con.ConName, con.ConDef)
-		constraints = append(constraints, conStr)
+	cons := make([]string, 0)
+	fkCons := make([]string, 0)
+	for _, constraint := range constraints {
+		conStr := fmt.Sprintf("%s %s %s;", alterStr, constraint.ConName, constraint.ConDef)
+		if constraint.ConType == "f" {
+			fkCons = append(fkCons, conStr)
+		} else {
+			cons = append(cons, conStr)
+		}
 	}
-	return constraints
+	return cons, fkCons
 }
