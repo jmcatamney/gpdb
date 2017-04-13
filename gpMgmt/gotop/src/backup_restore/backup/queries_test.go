@@ -21,10 +21,10 @@ func TestQueries(t *testing.T) {
 }
 
 var _ = Describe("backup/queries tests", func() {
+	BeforeSuite(func() {
+		connection, mock = testutils.CreateAndConnectMockDB()
+	})
 	Describe("GetTableAtts", func() {
-		BeforeEach(func() {
-			connection, mock = testutils.CreateAndConnectMockDB()
-		})
 		header := []string{"attname", "attnotnull", "atthasdef", "attisdropped", "atttypname", "attencoding"}
 		rowOne := []driver.Value{"i", "f", "f", "f", "int", nil}
 		rowTwo := []driver.Value{"j", "f", "f", "f", "character varying(20)", nil}
@@ -78,9 +78,6 @@ var _ = Describe("backup/queries tests", func() {
 		})
 	})
 	Describe("GetTableDefs", func() {
-		BeforeEach(func() {
-			connection, mock = testutils.CreateAndConnectMockDB()
-		})
 		header := []string{"adnum", "defval"}
 		rowOne := []driver.Value{"1", "42"}
 		rowTwo := []driver.Value{"2", "bar"}
@@ -111,9 +108,6 @@ var _ = Describe("backup/queries tests", func() {
 		})
 	})
 	Describe("GetConstraints", func() {
-		BeforeEach(func() {
-			connection, mock = testutils.CreateAndConnectMockDB()
-		})
 		header := []string{"conname", "condef"}
 		rowOneUnique := []driver.Value{"tablename_i_uniq", "UNIQUE (i)"}
 		rowTwoUnique := []driver.Value{"tablename_j_uniq", "UNIQUE (j)"}
@@ -227,6 +221,30 @@ var _ = Describe("backup/queries tests", func() {
 				Expect(results[2].ConName).To(Equal("check_ij"))
 				Expect(results[2].ConDef).To(Equal("CHECK (i <> 42 AND j::text <> ''::text)"))
 			})
+		})
+	})
+	Describe("GetDistributionPolicy", func() {
+		header := []string{"attname"}
+		rowDistOne := []driver.Value{"i"}
+		rowDistTwo := []driver.Value{"j"}
+
+		It("returns a slice for a table DISTRIBUTED RANDOMLY", func() {
+			fakeResult := sqlmock.NewRows(header)
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
+			results := backup.GetDistributionPolicy(connection, 0)
+			Expect(results).To(Equal("DISTRIBUTED RANDOMLY"))
+		})
+		It("returns a slice for a table DISTRIBUTED BY one column", func() {
+			fakeResult := sqlmock.NewRows(header).AddRow(rowDistOne...)
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
+			results := backup.GetDistributionPolicy(connection, 0)
+			Expect(results).To(Equal("DISTRIBUTED BY (i)"))
+		})
+		It("returns a slice for a table DISTRIBUTED BY two columns", func() {
+			fakeResult := sqlmock.NewRows(header).AddRow(rowDistOne...).AddRow(rowDistTwo...)
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
+			results := backup.GetDistributionPolicy(connection, 0)
+			Expect(results).To(Equal("DISTRIBUTED BY (i, j)"))
 		})
 	})
 })

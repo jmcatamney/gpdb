@@ -4,6 +4,7 @@ import (
 	"backup_restore/utils"
 	"database/sql"
 	"fmt"
+	"strings"
 )
 
 func GetAllDumpableTables(connection *utils.DBConn) []utils.Table {
@@ -96,22 +97,45 @@ func GetConstraints(connection *utils.DBConn, oid uint32) []QueryConstraint {
 	 * query is based on the queries underlying \d in psql, has roughly half the cost according to EXPLAIN,
 	 * and gets us only the information we need.*/
 	query := fmt.Sprintf(`
-SELECT DISTINCT
-	r.conname,
-	pg_catalog.pg_get_constraintdef(r.oid, TRUE) AS condef
-FROM pg_catalog.pg_constraint r
-JOIN pg_catalog.pg_attribute a
-	ON r.conrelid = a.attrelid
-JOIN (SELECT
-	unnest(conkey) AS un
-FROM pg_constraint) AS keys
-	ON a.attnum = keys.un
-WHERE r.conrelid = %d
-ORDER BY condef;
+SELECT
+	conname,
+	pg_catalog.pg_get_constraintdef(oid, TRUE) AS condef
+FROM pg_catalog.pg_constraint
+WHERE conrelid = %d;
 `, oid)
 
 	results := make([]QueryConstraint, 0)
 	err := connection.Select(&results, query)
 	utils.CheckError(err)
 	return results
+}
+
+type QueryDistPolicy struct {
+	AttName string
+}
+
+func GetDistributionPolicy(connection *utils.DBConn, oid uint32) string {
+	query := fmt.Sprintf(`
+SELECT a.attname
+FROM pg_attribute a
+JOIN (
+	SELECT
+		unnest(attrnums) AS attnum, 
+		localoid
+	FROM gp_distribution_policy
+) p
+ON (p.localoid,p.attnum) = (a.attrelid,a.attnum)
+WHERE a.attrelid = %d;`, oid)
+	results := make([]QueryDistPolicy, 0)
+	err := connection.Select(&results, query)
+	utils.CheckError(err)
+	if len(results) == 0 {
+		return "DISTRIBUTED RANDOMLY"
+	} else {
+		distCols := make([]string, 0)
+		for _, dist := range results {
+			distCols = append(distCols, dist.AttName)
+		}
+		return fmt.Sprintf("DISTRIBUTED BY (%s)", strings.Join(distCols, ", "))
+	}
 }

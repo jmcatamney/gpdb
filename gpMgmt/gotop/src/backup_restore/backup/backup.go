@@ -30,7 +30,8 @@ func DoBackup() {
 	for _, table := range tables {
 		tableAtts := GetTableAtts(connection, table.Oid)
 		tableDefs := GetTableDefs(connection, table.Oid)
-		PrintCreateTableStatement(os.Stdout, table.Tablename, tableAtts, tableDefs) // TODO: Change to write to file
+		distPolicy := GetDistributionPolicy(connection, table.Oid)
+		PrintCreateTableStatement(os.Stdout, table.Tablename, tableAtts, tableDefs, distPolicy) // TODO: Change to write to file
 	}
 	for _, table := range tables {
 		constraints := GetConstraints(connection, table.Oid)

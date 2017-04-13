@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func PrintCreateTableStatement(metadataFile io.Writer, tablename string, atts []QueryTableAtts, defs []QueryTableDefs) {
+func PrintCreateTableStatement(metadataFile io.Writer, tablename string, atts []QueryTableAtts, defs []QueryTableDefs, distPolicy string) {
 	fmt.Fprintf(metadataFile, "\n\nCREATE TABLE %s (\n", tablename)
 	lines := make([]string, 0)
 	for _, att := range atts {
@@ -31,7 +31,7 @@ func PrintCreateTableStatement(metadataFile io.Writer, tablename string, atts []
 	if len(lines) > 0 {
 		fmt.Fprintln(metadataFile, strings.Join(lines, ",\n"))
 	}
-	fmt.Fprintln(metadataFile, ");")
+	fmt.Fprintf(metadataFile, ") %s;\n", distPolicy)
 }
 
 func PrintAlterTableStatements(metadataFile io.Writer, tablename string, constraint []QueryConstraint) {
