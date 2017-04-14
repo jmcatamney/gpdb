@@ -161,7 +161,7 @@ func GetPartitionDefinition(connection *utils.DBConn, oid uint32) string {
 	if len(results) == 1 {
 		return results[0].PartitionDef
 	} else if len(results) > 1 {
-		utils.Abort("Too many rows returned from query to get partition definition: got %d rows, expected 1 row", len(results))
+		logger.Fatal("Too many rows returned from query to get partition definition: got %d rows, expected 1 row", len(results))
 	}
 	return ""
 }
@@ -194,7 +194,7 @@ WHERE oid = %d AND reloptions IS NOT NULL;`, oid)
 	if len(results) == 1 {
 		return results[0].StorageOptions.String
 	} else if len(results) > 1 {
-		utils.Abort("Too many rows returned from query to get storage options: got %d rows, expected 1 row", len(results))
+		logger.Fatal("Too many rows returned from query to get storage options: got %d rows, expected 1 row", len(results))
 	}
 	return ""
 }
