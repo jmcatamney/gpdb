@@ -264,4 +264,28 @@ var _ = Describe("backup/queries tests", func() {
 			Expect(results).To(Equal(""))
 		})
 	})
+	Describe("GetAOCODefinition", func() {
+		header := []string{"isco"}
+		coRow := []driver.Value{"t"}
+		aoRow := []driver.Value{"f"}
+
+		It("returns a slice for a column oriented table", func() {
+			fakeResult := sqlmock.NewRows(header).AddRow(coRow...)
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
+			results := backup.GetAOCODefinition(connection, 0)
+			Expect(results).To(Equal("(appendonly=true, orientation=column)"))
+		})
+		It("returns a slice for an append only table", func() {
+			fakeResult := sqlmock.NewRows(header).AddRow(aoRow...)
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
+			results := backup.GetAOCODefinition(connection, 0)
+			Expect(results).To(Equal("(appendonly=true)"))
+		})
+		It("returns a slice for a heap table", func() {
+			fakeResult := sqlmock.NewRows(header)
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
+			results := backup.GetAOCODefinition(connection, 0)
+			Expect(results).To(Equal(""))
+		})
+	})
 })
