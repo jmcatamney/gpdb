@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func PrintCreateTableStatement(metadataFile io.Writer, tablename string, atts []QueryTableAtts, defs []QueryTableDefs, distPolicy string, aocoDef string) {
+func PrintCreateTableStatement(metadataFile io.Writer, tablename string, atts []QueryTableAtts, defs []QueryTableDefs, distPolicy string, partDef string, aocoDef string) {
 	fmt.Fprintf(metadataFile, "\n\nCREATE TABLE %s (\n", tablename)
 	lines := make([]string, 0)
 	for _, att := range atts {
@@ -36,7 +36,8 @@ func PrintCreateTableStatement(metadataFile io.Writer, tablename string, atts []
 	if aocoDef != "" {
 		fmt.Fprintf(metadataFile, "WITH %s ", aocoDef)
 	}
-	fmt.Fprintf(metadataFile, "%s;\n", distPolicy)
+	fmt.Fprintf(metadataFile, "%s", distPolicy)
+	fmt.Fprintf(metadataFile, "%s;\n", partDef)
 }
 
 func PrintConstraintStatements(metadataFile io.Writer, cons []string, fkCons []string) {

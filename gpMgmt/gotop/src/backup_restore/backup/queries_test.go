@@ -247,4 +247,21 @@ var _ = Describe("backup/queries tests", func() {
 			Expect(results).To(Equal("DISTRIBUTED BY (i, j)"))
 		})
 	})
+	Describe("GetPartitionDefinition", func() {
+		header := []string{"pg_get_partition_def"}
+		parentPartRow := []driver.Value{"PARTITION BY LIST"}
+
+		It("returns a partition definition for a parent partition table", func() {
+			fakeResult := sqlmock.NewRows(header).AddRow(parentPartRow...)
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
+			results := backup.GetPartitionDefinition(connection, 0)
+			Expect(results).To(Equal(" PARTITION BY LIST"))
+		})
+		It("returns empty string for a non partition table", func() {
+			fakeResult := sqlmock.NewRows(header)
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
+			results := backup.GetPartitionDefinition(connection, 0)
+			Expect(results).To(Equal(""))
+		})
+	})
 })

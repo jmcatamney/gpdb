@@ -34,6 +34,8 @@ var _ = Describe("backup/metadata tests", func() {
 		distSingle := "DISTRIBUTED BY (i)"
 		distComposite := "DISTRIBUTED BY (i, j)"
 
+		emptyPartDef := ""
+
 		heapDef := ""
 		aoDef := "(appendonly=true)"
 		coDef := "(appendonly=true, orientation=column)"
@@ -41,14 +43,14 @@ var _ = Describe("backup/metadata tests", func() {
 		Context("No special table attributes", func() {
 			It("prints a CREATE TABLE block with one line", func() {
 				atts := []backup.QueryTableAtts{attsOne}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, heapDef)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, emptyPartDef, heapDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int
 ) DISTRIBUTED RANDOMLY;`)
 			})
 			It("prints a CREATE TABLE block with one line per attribute", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, heapDef)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, emptyPartDef, heapDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int,
 	j character varying(20)
@@ -56,13 +58,13 @@ var _ = Describe("backup/metadata tests", func() {
 			})
 			It("prints a CREATE TABLE block with no attributes", func() {
 				atts := []backup.QueryTableAtts{}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, heapDef)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, emptyPartDef, heapDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 ) DISTRIBUTED RANDOMLY;`)
 			})
 			It("prints a CREATE TABLE block without a dropped attribute", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsDropped}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, heapDef)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, emptyPartDef, heapDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int
 ) DISTRIBUTED RANDOMLY;`)
@@ -71,7 +73,7 @@ var _ = Describe("backup/metadata tests", func() {
 		Context("One special table attribute", func() {
 			It("prints a CREATE TABLE block where one line has the given ENCODING and the other has the default ENCODING", func() {
 				atts := []backup.QueryTableAtts{attsOneEnc, attsTwoEnc}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, heapDef)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, emptyPartDef, heapDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
 	j character varying(20) ENCODING (compresstype=zlib,blocksize=65536,compresslevel=1)
@@ -79,7 +81,7 @@ var _ = Describe("backup/metadata tests", func() {
 			})
 			It("prints a CREATE TABLE block where one line contains NOT NULL", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsNotNull}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, heapDef)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, emptyPartDef, heapDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int,
 	j character varying(20) NOT NULL
@@ -88,7 +90,7 @@ var _ = Describe("backup/metadata tests", func() {
 			It("prints a CREATE TABLE block where one line contains DEFAULT", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsTwo}
 				defs := []backup.QueryTableDefs{defsOne}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defs, distRandom, heapDef)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defs, distRandom, emptyPartDef, heapDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int DEFAULT 42,
 	j character varying(20)
@@ -97,7 +99,7 @@ var _ = Describe("backup/metadata tests", func() {
 			It("prints a CREATE TABLE block where both lines contain DEFAULT", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsTwo}
 				defs := []backup.QueryTableDefs{defsOne, defsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defs, distRandom, heapDef)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defs, distRandom, emptyPartDef, heapDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int DEFAULT 42,
 	j character varying(20) DEFAULT 'bar'::text
@@ -107,7 +109,7 @@ var _ = Describe("backup/metadata tests", func() {
 		Context("Multiple special table attributes on one column", func() {
 			It("prints a CREATE TABLE block where one line contains both NOT NULL and ENCODING", func() {
 				atts := []backup.QueryTableAtts{attsOneEnc, attsEncNotNull}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, heapDef)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, emptyPartDef, heapDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
 	j character varying(20) NOT NULL ENCODING (compresstype=zlib,blocksize=65536,compresslevel=1)
@@ -116,7 +118,7 @@ var _ = Describe("backup/metadata tests", func() {
 			It("prints a CREATE TABLE block where one line contains both DEFAULT and NOT NULL", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsNotNull}
 				defs := []backup.QueryTableDefs{defsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defs, distRandom, heapDef)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defs, distRandom, emptyPartDef, heapDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int,
 	j character varying(20) DEFAULT 'bar'::text NOT NULL
@@ -125,7 +127,7 @@ var _ = Describe("backup/metadata tests", func() {
 			It("prints a CREATE TABLE block where one line contains both DEFAULT and ENCODING", func() {
 				atts := []backup.QueryTableAtts{attsOneEnc, attsTwoEnc}
 				defs := []backup.QueryTableDefs{defsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defs, distRandom, heapDef)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defs, distRandom, emptyPartDef, heapDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
 	j character varying(20) DEFAULT 'bar'::text ENCODING (compresstype=zlib,blocksize=65536,compresslevel=1)
@@ -134,7 +136,7 @@ var _ = Describe("backup/metadata tests", func() {
 			It("prints a CREATE TABLE block where one line contains all three of DEFAULT, NOT NULL, and ENCODING", func() {
 				atts := []backup.QueryTableAtts{attsOneEnc, attsEncNotNull}
 				defs := []backup.QueryTableDefs{defsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defs, distRandom, heapDef)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defs, distRandom, emptyPartDef, heapDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
 	j character varying(20) DEFAULT 'bar'::text NOT NULL ENCODING (compresstype=zlib,blocksize=65536,compresslevel=1)
@@ -144,7 +146,7 @@ var _ = Describe("backup/metadata tests", func() {
 		Context("Table qualities (distribution keys and table type)", func() {
 			It("has a single-column distribution key", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distSingle, heapDef)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distSingle, emptyPartDef, heapDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int,
 	j character varying(20)
@@ -152,7 +154,7 @@ var _ = Describe("backup/metadata tests", func() {
 			})
 			It("has a multiple-column composite distribution key", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distComposite, heapDef)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distComposite, emptyPartDef, heapDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int,
 	j character varying(20)
@@ -160,7 +162,7 @@ var _ = Describe("backup/metadata tests", func() {
 			})
 			It("is an append-optimized table", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, aoDef)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, emptyPartDef, aoDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int,
 	j character varying(20)
@@ -168,7 +170,7 @@ var _ = Describe("backup/metadata tests", func() {
 			})
 			It("is an append-optimized table with a single-column distribution key", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distSingle, aoDef)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distSingle, emptyPartDef, aoDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int,
 	j character varying(20)
@@ -176,7 +178,7 @@ var _ = Describe("backup/metadata tests", func() {
 			})
 			It("is an append-optimized table with a two-column composite distribution key", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distComposite, aoDef)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distComposite, emptyPartDef, aoDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int,
 	j character varying(20)
@@ -184,7 +186,7 @@ var _ = Describe("backup/metadata tests", func() {
 			})
 			It("is an append-optimized column-oriented table", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, coDef)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, emptyPartDef, coDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int,
 	j character varying(20)
@@ -192,7 +194,7 @@ var _ = Describe("backup/metadata tests", func() {
 			})
 			It("is an append-optimized column-oriented table with a single-column distribution key", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distSingle, coDef)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distSingle, emptyPartDef, coDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int,
 	j character varying(20)
@@ -200,7 +202,7 @@ var _ = Describe("backup/metadata tests", func() {
 			})
 			It("is an append-optimized column-oriented table with a two-column composite distribution key", func() {
 				atts := []backup.QueryTableAtts{attsOne, attsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distComposite, coDef)
+				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distComposite, emptyPartDef, coDef)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int,
 	j character varying(20)

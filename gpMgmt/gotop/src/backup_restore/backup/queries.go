@@ -142,6 +142,23 @@ WHERE a.attrelid = %d;`, oid)
 	}
 }
 
+type QueryPartDef struct {
+	PgGetPartitionDef string `db:"pg_get_partition_def"`
+}
+
+func GetPartitionDefinition(connection *utils.DBConn, oid uint32) string {
+	query := fmt.Sprintf("SELECT * from pg_get_partition_def(%d, true, true) where pg_get_partition_def IS NOT NULL", oid)
+	results := make([]QueryPartDef, 0)
+	err := connection.Select(&results, query)
+	utils.CheckError(err)
+	if len(results) == 1 {
+		return " " + results[0].PgGetPartitionDef
+	} else if len(results) > 1 {
+		utils.Abort("Too many rows returned from query on pg_appendonly: got %d rows, expected 1 row", len(results))
+	}
+	return ""
+}
+
 type QueryAOCODef struct {
 	IsCO bool
 }
@@ -154,7 +171,7 @@ WHERE relid = %d;`, oid)
 	results := make([]QueryAOCODef, 0)
 	err := connection.Select(&results, query)
 	utils.CheckError(err)
-	if len(results) == 1{
+	if len(results) == 1 {
 		if !results[0].IsCO { // Append-Optimized table
 			return "(appendonly=true)"
 		} else { // Append-Optimized Column-Oriented table
@@ -163,5 +180,5 @@ WHERE relid = %d;`, oid)
 	} else if len(results) > 1 {
 		utils.Abort("Too many rows returned from query on pg_appendonly: got %d rows, expected 1 row", len(results))
 	}
-	return ""// Heap table
+	return "" // Heap table
 }
