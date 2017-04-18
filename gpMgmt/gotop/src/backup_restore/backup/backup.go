@@ -28,7 +28,7 @@ func DoBackup() {
 
 	allConstraints := make([]string, 0)
 	allFkConstraints := make([]string, 0) // Slice for FOREIGN KEY allConstraints, since they must be printed after PRIMARY KEY allConstraints
-	tables := GetAllDumpableTables(connection)
+	tables := GetAllUserTables(connection)
 	for _, table := range tables {
 		tableAttributes := GetTableAttributes(connection, table.Oid)
 		tableDefaults := GetTableDefaults(connection, table.Oid)

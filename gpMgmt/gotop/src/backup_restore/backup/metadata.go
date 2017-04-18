@@ -51,7 +51,10 @@ func PrintCreateTableStatement(metadataFile io.Writer, tablename string, columnD
 		fmt.Fprintf(metadataFile, "WITH (%s) ", tableDef.StorageOpts)
 	}
 	fmt.Fprintf(metadataFile, "%s", tableDef.DistPolicy)
-	fmt.Fprintf(metadataFile, "%s;\n", tableDef.PartDef)
+	if tableDef.PartDef != "" {
+		fmt.Fprintf(metadataFile, " %s", tableDef.PartDef)
+	}
+	fmt.Fprintf(metadataFile, ";\n")
 }
 
 func ConsolidateColumnInfo(atts []QueryTableAtts, defs []QueryTableDefs) []ColumnDefinition {

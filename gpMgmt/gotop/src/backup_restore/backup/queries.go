@@ -7,25 +7,30 @@ import (
 	"strings"
 )
 
-func GetAllDumpableTables(connection *utils.DBConn) []utils.Table {
+func GetAllUserTables(connection *utils.DBConn) []utils.Table {
 	query := `
-SELECT ALLTABLES.oid, ALLTABLES.schemaname, ALLTABLES.tablename FROM
-
-	(SELECT c.oid, n.nspname AS schemaname, c.relname AS tablename FROM pg_class c, pg_namespace n
-	WHERE n.oid = c.relnamespace) as ALLTABLES,
-
-	(SELECT n.nspname AS schemaname, c.relname AS tablename
-	FROM pg_class c LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
-	LEFT JOIN pg_tablespace t ON t.oid = c.reltablespace
-	WHERE c.relkind = 'r'::"char" AND c.oid > 16384 AND (c.relnamespace > 16384 or n.nspname = 'public')
-	EXCEPT
-	((SELECT x.schemaname, x.partitiontablename FROM
-	(SELECT distinct schemaname, tablename, partitiontablename, partitionlevel FROM pg_partitions) as X,
-	(SELECT schemaname, tablename maxtable, max(partitionlevel) maxlevel FROM pg_partitions group by (tablename, schemaname)) as Y
-	WHERE x.schemaname = y.schemaname and x.tablename = Y.maxtable and x.partitionlevel != Y.maxlevel)
-	UNION (SELECT distinct schemaname, tablename FROM pg_partitions))) as DATATABLES
-
-WHERE ALLTABLES.schemaname = DATATABLES.schemaname and ALLTABLES.tablename = DATATABLES.tablename AND ALLTABLES.oid not in (select reloid from pg_exttable) AND ALLTABLES.schemaname NOT LIKE 'pg_temp_%' ORDER BY DATATABLES.schemaname, DATATABLES.tablename;`
+SELECT
+	c.oid,
+  n.nspname AS schemaname,
+  c.relname AS tablename
+FROM pg_class c
+LEFT JOIN pg_partition_rule pr
+  ON c.oid = pr.parchildrelid
+LEFT JOIN pg_partition p
+  ON pr.paroid = p.oid
+LEFT JOIN pg_namespace n
+  ON c.relnamespace = n.oid
+WHERE relkind = 'r'
+AND c.oid NOT IN (SELECT
+  p.parchildrelid
+FROM pg_partition_rule p
+LEFT
+JOIN pg_exttable e
+  ON p.parchildrelid = e.reloid
+WHERE e.reloid IS NULL)
+AND (c.relnamespace > 16384
+OR n.nspname = 'public')
+ORDER BY c.oid;`
 
 	results := make([]utils.Table, 0)
 
@@ -145,7 +150,7 @@ WHERE a.attrelid = %d;`, oid)
 }
 
 type QueryPartDef struct {
-	PgGetPartitionDef string `db:"pg_get_partition_def"`
+	PartitionDef string `db:"pg_get_partition_def"`
 }
 
 func GetPartitionDefinition(connection *utils.DBConn, oid uint32) string {
@@ -154,7 +159,7 @@ func GetPartitionDefinition(connection *utils.DBConn, oid uint32) string {
 	err := connection.Select(&results, query)
 	utils.CheckError(err)
 	if len(results) == 1 {
-		return " " + results[0].PgGetPartitionDef
+		return results[0].PartitionDef
 	} else if len(results) > 1 {
 		utils.Abort("Too many rows returned from query to get partition definition: got %d rows, expected 1 row", len(results))
 	}

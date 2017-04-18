@@ -41,6 +41,10 @@ func ExpectRegexp(buffer *gbytes.Buffer, testStr string) {
 	Expect(buffer).Should(gbytes.Say(regexp.QuoteMeta(testStr)))
 }
 
+func ExpectRegex(result string, testStr string) {
+	Expect(result).To(Equal(regexp.QuoteMeta(testStr)))
+}
+
 func ShouldPanicWithMessage(message string) {
 	if r := recover(); r != nil {
 		errMsg := strings.TrimSpace(fmt.Sprintf("%v", r))

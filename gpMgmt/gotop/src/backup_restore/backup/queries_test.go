@@ -249,19 +249,46 @@ var _ = Describe("backup/queries tests", func() {
 	})
 	Describe("GetPartitionDefinition", func() {
 		header := []string{"pg_get_partition_def"}
-		parentPartRow := []driver.Value{"PARTITION BY LIST"}
+		partListRow := []driver.Value{`PARTITION BY LIST(gender)
+	(
+	PARTITION girls VALUES('F') WITH (tablename='rank_1_prt_girls', appendonly=false ),
+	PARTITION boys VALUES('M') WITH (tablename='rank_1_prt_boys', appendonly=false ),
+	DEFAULT PARTITION other  WITH (tablename='rank_1_prt_other', appendonly=false )
+	);`}
+		partRangeRow := []driver.Value{`PARTITION BY RANGE(year)
+	(
+	START (2001) END (2002) EVERY (1) WITH (tablename='rank_1_prt_2', appendonly=false ),
+	START (2002) END (2003) EVERY (1) WITH (tablename='rank_1_prt_3', appendonly=false ),
+	DEFAULT PARTITION extra  WITH (tablename='rank_1_prt_extra', appendonly=false )
+	);`}
 
-		It("returns a partition definition for a parent partition table", func() {
-			fakeResult := sqlmock.NewRows(header).AddRow(parentPartRow...)
+		It("returns a partition definition for a LIST partition table", func() {
+			fakeResult := sqlmock.NewRows(header).AddRow(partListRow...)
 			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-			results := backup.GetPartitionDefinition(connection, 0)
-			Expect(results).To(Equal(" PARTITION BY LIST"))
+			result := backup.GetPartitionDefinition(connection, 0)
+			Expect(result).To(Equal(`PARTITION BY LIST(gender)
+	(
+	PARTITION girls VALUES('F') WITH (tablename='rank_1_prt_girls', appendonly=false ),
+	PARTITION boys VALUES('M') WITH (tablename='rank_1_prt_boys', appendonly=false ),
+	DEFAULT PARTITION other  WITH (tablename='rank_1_prt_other', appendonly=false )
+	);`))
+		})
+		It("returns a partition definition for a RANGE partition table", func() {
+			fakeResult := sqlmock.NewRows(header).AddRow(partRangeRow...)
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
+			result := backup.GetPartitionDefinition(connection, 0)
+			Expect(result).To(Equal(`PARTITION BY RANGE(year)
+	(
+	START (2001) END (2002) EVERY (1) WITH (tablename='rank_1_prt_2', appendonly=false ),
+	START (2002) END (2003) EVERY (1) WITH (tablename='rank_1_prt_3', appendonly=false ),
+	DEFAULT PARTITION extra  WITH (tablename='rank_1_prt_extra', appendonly=false )
+	);`))
 		})
 		It("returns empty string for a non partition table", func() {
 			fakeResult := sqlmock.NewRows(header)
 			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-			results := backup.GetPartitionDefinition(connection, 0)
-			Expect(results).To(Equal(""))
+			result := backup.GetPartitionDefinition(connection, 0)
+			Expect(result).To(Equal(""))
 		})
 	})
 	Describe("GetStorageOptions", func() {
