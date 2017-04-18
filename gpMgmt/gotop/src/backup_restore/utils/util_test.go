@@ -11,6 +11,7 @@ import (
 
 func TestUtil(t *testing.T) {
 	RegisterFailHandler(Fail)
+	RunSpecs(t, "utils tests")
 }
 
 var _ = Describe("utils/util tests", func() {

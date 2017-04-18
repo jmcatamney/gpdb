@@ -1,30 +1,45 @@
 package backup
 
 import (
+	"backup_restore/utils"
+	"database/sql"
 	"fmt"
 	"io"
 	"sort"
 	"strings"
 )
 
-func PrintCreateTableStatement(metadataFile io.Writer, tablename string, atts []QueryTableAtts, defs []QueryTableDefs, distPolicy string, partDef string, aocoDef string) {
+type ColumnDefinition struct {
+	Num       int
+	Name      string
+	NotNull   bool
+	HasDef    bool
+	IsDropped bool
+	TypName   string
+	Encoding  sql.NullString
+	DefVal    string
+}
+
+type TableDefinition struct {
+	DistPolicy  string
+	PartDef     string
+	StorageOpts string
+}
+
+func PrintCreateTableStatement(metadataFile io.Writer, tablename string, columnDefs []ColumnDefinition, tableDef TableDefinition) {
 	fmt.Fprintf(metadataFile, "\n\nCREATE TABLE %s (\n", tablename)
 	lines := make([]string, 0)
-	for _, att := range atts {
-		if !att.AttIsDropped {
-			line := fmt.Sprintf("\t%s %s", att.AttName, att.AttTypName)
-			if att.AttHasDef {
-				for _, def := range defs {
-					if def.AdNum == att.AttNum {
-						line += fmt.Sprintf(" DEFAULT %s", def.DefVal)
-					}
-				}
+	for _, col := range columnDefs {
+		if !col.IsDropped {
+			line := fmt.Sprintf("\t%s %s", col.Name, col.TypName)
+			if col.HasDef {
+				line += fmt.Sprintf(" DEFAULT %s", col.DefVal)
 			}
-			if att.AttNotNull {
+			if col.NotNull {
 				line += " NOT NULL"
 			}
-			if att.AttEncoding.Valid {
-				line += fmt.Sprintf(" ENCODING (%s)", att.AttEncoding.String)
+			if col.Encoding.Valid {
+				line += fmt.Sprintf(" ENCODING (%s)", col.Encoding.String)
 			}
 			lines = append(lines, line)
 		}
@@ -33,11 +48,33 @@ func PrintCreateTableStatement(metadataFile io.Writer, tablename string, atts []
 		fmt.Fprintln(metadataFile, strings.Join(lines, ",\n"))
 	}
 	fmt.Fprintf(metadataFile, ") ")
-	if aocoDef != "" {
-		fmt.Fprintf(metadataFile, "WITH %s ", aocoDef)
+	if tableDef.StorageOpts != "" {
+		fmt.Fprintf(metadataFile, "WITH %s ", tableDef.StorageOpts)
 	}
-	fmt.Fprintf(metadataFile, "%s", distPolicy)
-	fmt.Fprintf(metadataFile, "%s;\n", partDef)
+	fmt.Fprintf(metadataFile, "%s", tableDef.DistPolicy)
+	fmt.Fprintf(metadataFile, "%s;\n", tableDef.PartDef)
+}
+
+func ConsolidateColumnInfo(atts []QueryTableAtts, defs []QueryTableDefs) []ColumnDefinition {
+	if len(atts) != len(defs) {
+		utils.Abort("Attributes array and defaults array must have the same length (attributes length %d, defaults length %d", len(atts), len(defs))
+	}
+	colDefs := make([]ColumnDefinition, 0)
+	// The queries to get attributes and defaults ORDER BY oid and then attribute number, so we can assume the arrays are in the same order without sorting
+	for i := range atts {
+		colDef := ColumnDefinition{
+			Num:       atts[i].AttNum,
+			Name:      atts[i].AttName,
+			NotNull:   atts[i].AttNotNull,
+			HasDef:    atts[i].AttHasDef,
+			IsDropped: atts[i].AttIsDropped,
+			TypName:   atts[i].AttTypName,
+			Encoding:  atts[i].AttEncoding,
+			DefVal:    defs[i].DefVal,
+		}
+		colDefs = append(colDefs, colDef)
+	}
+	return colDefs
 }
 
 func PrintConstraintStatements(metadataFile io.Writer, cons []string, fkCons []string) {

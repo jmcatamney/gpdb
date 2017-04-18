@@ -30,12 +30,14 @@ func DoBackup() {
 	allFkConstraints := make([]string, 0) // Slice for FOREIGN KEY allConstraints, since they must be printed after PRIMARY KEY allConstraints
 	tables := GetAllDumpableTables(connection)
 	for _, table := range tables {
-		tableAtts := GetTableAtts(connection, table.Oid)
-		tableDefs := GetTableDefs(connection, table.Oid)
+		tableAttributes := GetTableAttributes(connection, table.Oid)
+		tableDefaults := GetTableDefaults(connection, table.Oid)
 		distPolicy := GetDistributionPolicy(connection, table.Oid)
 		partitionDef := GetPartitionDefinition(connection, table.Oid)
-		aocoDef := GetAOCODefinition(connection, table.Oid)
-		PrintCreateTableStatement(os.Stdout, table.Tablename, tableAtts, tableDefs, distPolicy, partitionDef, aocoDef) // TODO: Change to write to file
+		storageOpts := GetStorageOptions(connection, table.Oid)
+		columnDefs := ConsolidateColumnInfo(tableAttributes, tableDefaults)
+		tableDef := TableDefinition{distPolicy, partitionDef, storageOpts}
+		PrintCreateTableStatement(os.Stdout, table.Tablename, columnDefs, tableDef) // TODO: Change to write to file
 	}
 	for _, table := range tables {
 		conList := GetConstraints(connection, table.Oid)

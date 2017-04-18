@@ -18,17 +18,18 @@ func TestMetadata(t *testing.T) {
 var _ = Describe("backup/metadata tests", func() {
 	Describe("PrintCreateTableStatement", func() {
 		buffer := gbytes.NewBuffer()
-		attsOne := backup.QueryTableAtts{1, "i", false, true, false, "int", sql.NullString{String: "", Valid: false}}
-		attsTwo := backup.QueryTableAtts{2, "j", false, true, false, "character varying(20)", sql.NullString{String: "", Valid: false}}
-		attsDropped := backup.QueryTableAtts{2, "j", false, true, true, "character varying(20)", sql.NullString{String: "", Valid: false}}
-		attsOneEnc := backup.QueryTableAtts{1, "i", false, false, false, "int", sql.NullString{String: "compresstype=none,blocksize=32768,compresslevel=0", Valid: true}}
-		attsTwoEnc := backup.QueryTableAtts{2, "j", false, true, false, "character varying(20)", sql.NullString{String: "compresstype=zlib,blocksize=65536,compresslevel=1", Valid: true}}
-		attsNotNull := backup.QueryTableAtts{2, "j", true, true, false, "character varying(20)", sql.NullString{String: "", Valid: false}}
-		attsEncNotNull := backup.QueryTableAtts{2, "j", true, true, false, "character varying(20)", sql.NullString{String: "compresstype=zlib,blocksize=65536,compresslevel=1", Valid: true}}
-
-		defsOne := backup.QueryTableDefs{1, "42"}
-		defsTwo := backup.QueryTableDefs{2, "'bar'::text"}
-		defsEmpty := []backup.QueryTableDefs{}
+		rowOne := backup.ColumnDefinition{1, "i", false, false, false, "int", sql.NullString{String: "", Valid: false}, ""}
+		rowTwo := backup.ColumnDefinition{2, "j", false, false, false, "character varying(20)", sql.NullString{String: "", Valid: false}, ""}
+		rowDropped := backup.ColumnDefinition{2, "j", false, false, true, "character varying(20)", sql.NullString{String: "", Valid: false}, ""}
+		rowOneEnc := backup.ColumnDefinition{1, "i", false, false, false, "int", sql.NullString{String: "compresstype=none,blocksize=32768,compresslevel=0", Valid: true}, ""}
+		rowTwoEnc := backup.ColumnDefinition{2, "j", false, false, false, "character varying(20)", sql.NullString{String: "compresstype=zlib,blocksize=65536,compresslevel=1", Valid: true}, ""}
+		rowNotNull := backup.ColumnDefinition{2, "j", true, false, false, "character varying(20)", sql.NullString{String: "", Valid: false}, ""}
+		rowEncNotNull := backup.ColumnDefinition{2, "j", true, false, false, "character varying(20)", sql.NullString{String: "compresstype=zlib,blocksize=65536,compresslevel=1", Valid: true}, ""}
+		rowOneDef := backup.ColumnDefinition{1, "i", false, true, false, "int", sql.NullString{String: "", Valid: false}, "42"}
+		rowTwoDef := backup.ColumnDefinition{2, "j", false, true, false, "character varying(20)", sql.NullString{String: "", Valid: false}, "'bar'::text"}
+		rowTwoEncDef := backup.ColumnDefinition{2, "j", false, true, false, "character varying(20)", sql.NullString{String: "compresstype=zlib,blocksize=65536,compresslevel=1", Valid: true}, "'bar'::text"}
+		rowNotNullDef := backup.ColumnDefinition{2, "j", true, true, false, "character varying(20)", sql.NullString{String: "", Valid: false}, "'bar'::text"}
+		rowEncNotNullDef := backup.ColumnDefinition{2, "j", true, true, false, "character varying(20)", sql.NullString{String: "compresstype=zlib,blocksize=65536,compresslevel=1", Valid: true}, "'bar'::text"}
 
 		distRandom := "DISTRIBUTED RANDOMLY"
 		distSingle := "DISTRIBUTED BY (i)"
@@ -36,35 +37,41 @@ var _ = Describe("backup/metadata tests", func() {
 
 		emptyPartDef := ""
 
-		heapDef := ""
-		aoDef := "(appendonly=true)"
-		coDef := "(appendonly=true, orientation=column)"
+		heapOpts := ""
+		aoOpts := "(appendonly=true)"
+		coOpts := "(appendonly=true, orientation=column)"
+		heapFillOpts := "(fillfactor=42)"
+		coManyOpts := "(appendonly=true, orientation=column, fillfactor=42, compresstype=zlib, blocksize=32768, compresslevel=1)"
 
 		Context("No special table attributes", func() {
 			It("prints a CREATE TABLE block with one line", func() {
-				atts := []backup.QueryTableAtts{attsOne}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, emptyPartDef, heapDef)
+				col := []backup.ColumnDefinition{rowOne}
+				table := backup.TableDefinition{distRandom, emptyPartDef, heapOpts}
+				backup.PrintCreateTableStatement(buffer, "tablename", col, table)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int
 ) DISTRIBUTED RANDOMLY;`)
 			})
 			It("prints a CREATE TABLE block with one line per attribute", func() {
-				atts := []backup.QueryTableAtts{attsOne, attsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, emptyPartDef, heapDef)
+				col := []backup.ColumnDefinition{rowOne, rowTwo}
+				table := backup.TableDefinition{distRandom, emptyPartDef, heapOpts}
+				backup.PrintCreateTableStatement(buffer, "tablename", col, table)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int,
 	j character varying(20)
 ) DISTRIBUTED RANDOMLY;`)
 			})
 			It("prints a CREATE TABLE block with no attributes", func() {
-				atts := []backup.QueryTableAtts{}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, emptyPartDef, heapDef)
+				col := []backup.ColumnDefinition{}
+				table := backup.TableDefinition{distRandom, emptyPartDef, heapOpts}
+				backup.PrintCreateTableStatement(buffer, "tablename", col, table)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 ) DISTRIBUTED RANDOMLY;`)
 			})
 			It("prints a CREATE TABLE block without a dropped attribute", func() {
-				atts := []backup.QueryTableAtts{attsOne, attsDropped}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, emptyPartDef, heapDef)
+				col := []backup.ColumnDefinition{rowOne, rowDropped}
+				table := backup.TableDefinition{distRandom, emptyPartDef, heapOpts}
+				backup.PrintCreateTableStatement(buffer, "tablename", col, table)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int
 ) DISTRIBUTED RANDOMLY;`)
@@ -72,34 +79,36 @@ var _ = Describe("backup/metadata tests", func() {
 		})
 		Context("One special table attribute", func() {
 			It("prints a CREATE TABLE block where one line has the given ENCODING and the other has the default ENCODING", func() {
-				atts := []backup.QueryTableAtts{attsOneEnc, attsTwoEnc}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, emptyPartDef, heapDef)
+				col := []backup.ColumnDefinition{rowOneEnc, rowTwoEnc}
+				table := backup.TableDefinition{distRandom, emptyPartDef, heapOpts}
+				backup.PrintCreateTableStatement(buffer, "tablename", col, table)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
 	j character varying(20) ENCODING (compresstype=zlib,blocksize=65536,compresslevel=1)
 ) DISTRIBUTED RANDOMLY;`)
 			})
 			It("prints a CREATE TABLE block where one line contains NOT NULL", func() {
-				atts := []backup.QueryTableAtts{attsOne, attsNotNull}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, emptyPartDef, heapDef)
+				col := []backup.ColumnDefinition{rowOne, rowNotNull}
+				table := backup.TableDefinition{distRandom, emptyPartDef, heapOpts}
+				backup.PrintCreateTableStatement(buffer, "tablename", col, table)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int,
 	j character varying(20) NOT NULL
 ) DISTRIBUTED RANDOMLY;`)
 			})
 			It("prints a CREATE TABLE block where one line contains DEFAULT", func() {
-				atts := []backup.QueryTableAtts{attsOne, attsTwo}
-				defs := []backup.QueryTableDefs{defsOne}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defs, distRandom, emptyPartDef, heapDef)
+				col := []backup.ColumnDefinition{rowOneDef, rowTwo}
+				table := backup.TableDefinition{distRandom, emptyPartDef, heapOpts}
+				backup.PrintCreateTableStatement(buffer, "tablename", col, table)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int DEFAULT 42,
 	j character varying(20)
 ) DISTRIBUTED RANDOMLY;`)
 			})
 			It("prints a CREATE TABLE block where both lines contain DEFAULT", func() {
-				atts := []backup.QueryTableAtts{attsOne, attsTwo}
-				defs := []backup.QueryTableDefs{defsOne, defsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defs, distRandom, emptyPartDef, heapDef)
+				col := []backup.ColumnDefinition{rowOneDef, rowTwoDef}
+				table := backup.TableDefinition{distRandom, emptyPartDef, heapOpts}
+				backup.PrintCreateTableStatement(buffer, "tablename", col, table)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int DEFAULT 42,
 	j character varying(20) DEFAULT 'bar'::text
@@ -108,105 +117,168 @@ var _ = Describe("backup/metadata tests", func() {
 		})
 		Context("Multiple special table attributes on one column", func() {
 			It("prints a CREATE TABLE block where one line contains both NOT NULL and ENCODING", func() {
-				atts := []backup.QueryTableAtts{attsOneEnc, attsEncNotNull}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, emptyPartDef, heapDef)
+				col := []backup.ColumnDefinition{rowOneEnc, rowEncNotNull}
+				table := backup.TableDefinition{distRandom, emptyPartDef, heapOpts}
+				backup.PrintCreateTableStatement(buffer, "tablename", col, table)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
 	j character varying(20) NOT NULL ENCODING (compresstype=zlib,blocksize=65536,compresslevel=1)
 ) DISTRIBUTED RANDOMLY;`)
 			})
 			It("prints a CREATE TABLE block where one line contains both DEFAULT and NOT NULL", func() {
-				atts := []backup.QueryTableAtts{attsOne, attsNotNull}
-				defs := []backup.QueryTableDefs{defsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defs, distRandom, emptyPartDef, heapDef)
+				col := []backup.ColumnDefinition{rowOne, rowNotNullDef}
+				table := backup.TableDefinition{distRandom, emptyPartDef, heapOpts}
+				backup.PrintCreateTableStatement(buffer, "tablename", col, table)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int,
 	j character varying(20) DEFAULT 'bar'::text NOT NULL
 ) DISTRIBUTED RANDOMLY;`)
 			})
 			It("prints a CREATE TABLE block where one line contains both DEFAULT and ENCODING", func() {
-				atts := []backup.QueryTableAtts{attsOneEnc, attsTwoEnc}
-				defs := []backup.QueryTableDefs{defsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defs, distRandom, emptyPartDef, heapDef)
+				col := []backup.ColumnDefinition{rowOneEnc, rowTwoEncDef}
+				table := backup.TableDefinition{distRandom, emptyPartDef, heapOpts}
+				backup.PrintCreateTableStatement(buffer, "tablename", col, table)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
 	j character varying(20) DEFAULT 'bar'::text ENCODING (compresstype=zlib,blocksize=65536,compresslevel=1)
 ) DISTRIBUTED RANDOMLY;`)
 			})
 			It("prints a CREATE TABLE block where one line contains all three of DEFAULT, NOT NULL, and ENCODING", func() {
-				atts := []backup.QueryTableAtts{attsOneEnc, attsEncNotNull}
-				defs := []backup.QueryTableDefs{defsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defs, distRandom, emptyPartDef, heapDef)
+				col := []backup.ColumnDefinition{rowOneEnc, rowEncNotNullDef}
+				table := backup.TableDefinition{distRandom, emptyPartDef, heapOpts}
+				backup.PrintCreateTableStatement(buffer, "tablename", col, table)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int ENCODING (compresstype=none,blocksize=32768,compresslevel=0),
 	j character varying(20) DEFAULT 'bar'::text NOT NULL ENCODING (compresstype=zlib,blocksize=65536,compresslevel=1)
 ) DISTRIBUTED RANDOMLY;`)
 			})
 		})
-		Context("Table qualities (distribution keys and table type)", func() {
+		Context("Table qualities (distribution keys and storage options)", func() {
 			It("has a single-column distribution key", func() {
-				atts := []backup.QueryTableAtts{attsOne, attsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distSingle, emptyPartDef, heapDef)
+				col := []backup.ColumnDefinition{rowOne, rowTwo}
+				table := backup.TableDefinition{distSingle, emptyPartDef, heapOpts}
+				backup.PrintCreateTableStatement(buffer, "tablename", col, table)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int,
 	j character varying(20)
 ) DISTRIBUTED BY (i);`)
 			})
 			It("has a multiple-column composite distribution key", func() {
-				atts := []backup.QueryTableAtts{attsOne, attsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distComposite, emptyPartDef, heapDef)
+				col := []backup.ColumnDefinition{rowOne, rowTwo}
+				table := backup.TableDefinition{distComposite, emptyPartDef, heapOpts}
+				backup.PrintCreateTableStatement(buffer, "tablename", col, table)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int,
 	j character varying(20)
 ) DISTRIBUTED BY (i, j);`)
 			})
 			It("is an append-optimized table", func() {
-				atts := []backup.QueryTableAtts{attsOne, attsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, emptyPartDef, aoDef)
+				col := []backup.ColumnDefinition{rowOne, rowTwo}
+				table := backup.TableDefinition{distRandom, emptyPartDef, aoOpts}
+				backup.PrintCreateTableStatement(buffer, "tablename", col, table)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int,
 	j character varying(20)
 ) WITH (appendonly=true) DISTRIBUTED RANDOMLY;`)
 			})
 			It("is an append-optimized table with a single-column distribution key", func() {
-				atts := []backup.QueryTableAtts{attsOne, attsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distSingle, emptyPartDef, aoDef)
+				col := []backup.ColumnDefinition{rowOne, rowTwo}
+				table := backup.TableDefinition{distSingle, emptyPartDef, aoOpts}
+				backup.PrintCreateTableStatement(buffer, "tablename", col, table)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int,
 	j character varying(20)
 ) WITH (appendonly=true) DISTRIBUTED BY (i);`)
 			})
 			It("is an append-optimized table with a two-column composite distribution key", func() {
-				atts := []backup.QueryTableAtts{attsOne, attsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distComposite, emptyPartDef, aoDef)
+				col := []backup.ColumnDefinition{rowOne, rowTwo}
+				table := backup.TableDefinition{distComposite, emptyPartDef, aoOpts}
+				backup.PrintCreateTableStatement(buffer, "tablename", col, table)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int,
 	j character varying(20)
 ) WITH (appendonly=true) DISTRIBUTED BY (i, j);`)
 			})
 			It("is an append-optimized column-oriented table", func() {
-				atts := []backup.QueryTableAtts{attsOne, attsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distRandom, emptyPartDef, coDef)
+				col := []backup.ColumnDefinition{rowOne, rowTwo}
+				table := backup.TableDefinition{distRandom, emptyPartDef, coOpts}
+				backup.PrintCreateTableStatement(buffer, "tablename", col, table)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int,
 	j character varying(20)
 ) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;`)
 			})
 			It("is an append-optimized column-oriented table with a single-column distribution key", func() {
-				atts := []backup.QueryTableAtts{attsOne, attsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distSingle, emptyPartDef, coDef)
+				col := []backup.ColumnDefinition{rowOne, rowTwo}
+				table := backup.TableDefinition{distSingle, emptyPartDef, coOpts}
+				backup.PrintCreateTableStatement(buffer, "tablename", col, table)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int,
 	j character varying(20)
 ) WITH (appendonly=true, orientation=column) DISTRIBUTED BY (i);`)
 			})
 			It("is an append-optimized column-oriented table with a two-column composite distribution key", func() {
-				atts := []backup.QueryTableAtts{attsOne, attsTwo}
-				backup.PrintCreateTableStatement(buffer, "tablename", atts, defsEmpty, distComposite, emptyPartDef, coDef)
+				col := []backup.ColumnDefinition{rowOne, rowTwo}
+				table := backup.TableDefinition{distComposite, emptyPartDef, coOpts}
+				backup.PrintCreateTableStatement(buffer, "tablename", col, table)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
 	i int,
 	j character varying(20)
 ) WITH (appendonly=true, orientation=column) DISTRIBUTED BY (i, j);`)
+			})
+			It("is a heap table with a fill factor", func() {
+				col := []backup.ColumnDefinition{rowOne, rowTwo}
+				table := backup.TableDefinition{distRandom, emptyPartDef, heapFillOpts}
+				backup.PrintCreateTableStatement(buffer, "tablename", col, table)
+				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
+	i int,
+	j character varying(20)
+) WITH (fillfactor=42) DISTRIBUTED RANDOMLY;`)
+			})
+			It("is a heap table with a fill factor and a single-column distribution key", func() {
+				col := []backup.ColumnDefinition{rowOne, rowTwo}
+				table := backup.TableDefinition{distSingle, emptyPartDef, heapFillOpts}
+				backup.PrintCreateTableStatement(buffer, "tablename", col, table)
+				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
+	i int,
+	j character varying(20)
+) WITH (fillfactor=42) DISTRIBUTED BY (i);`)
+			})
+			It("is a heap table with a fill factor and a multiple-column composite distribution key", func() {
+				col := []backup.ColumnDefinition{rowOne, rowTwo}
+				table := backup.TableDefinition{distComposite, emptyPartDef, heapFillOpts}
+				backup.PrintCreateTableStatement(buffer, "tablename", col, table)
+				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
+	i int,
+	j character varying(20)
+) WITH (fillfactor=42) DISTRIBUTED BY (i, j);`)
+			})
+			It("is an append-optimized column-oriented table with complex storage options", func() {
+				col := []backup.ColumnDefinition{rowOne, rowTwo}
+				table := backup.TableDefinition{distRandom, emptyPartDef, coManyOpts}
+				backup.PrintCreateTableStatement(buffer, "tablename", col, table)
+				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
+	i int,
+	j character varying(20)
+) WITH (appendonly=true, orientation=column, fillfactor=42, compresstype=zlib, blocksize=32768, compresslevel=1) DISTRIBUTED RANDOMLY;`)
+			})
+			It("is an append-optimized column-oriented table with complex storage options and a single-column distribution key", func() {
+				col := []backup.ColumnDefinition{rowOne, rowTwo}
+				table := backup.TableDefinition{distSingle, emptyPartDef, coManyOpts}
+				backup.PrintCreateTableStatement(buffer, "tablename", col, table)
+				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
+	i int,
+	j character varying(20)
+) WITH (appendonly=true, orientation=column, fillfactor=42, compresstype=zlib, blocksize=32768, compresslevel=1) DISTRIBUTED BY (i);`)
+			})
+			It("is an append-optimized column-oriented table with complex storage options and a two-column composite distribution key", func() {
+				col := []backup.ColumnDefinition{rowOne, rowTwo}
+				table := backup.TableDefinition{distComposite, emptyPartDef, coManyOpts}
+				backup.PrintCreateTableStatement(buffer, "tablename", col, table)
+				testutils.ExpectRegexp(buffer, `CREATE TABLE tablename (
+	i int,
+	j character varying(20)
+) WITH (appendonly=true, orientation=column, fillfactor=42, compresstype=zlib, blocksize=32768, compresslevel=1) DISTRIBUTED BY (i, j);`)
 			})
 		})
 	})

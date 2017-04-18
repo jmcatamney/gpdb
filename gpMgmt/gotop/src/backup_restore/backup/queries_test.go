@@ -24,7 +24,7 @@ var _ = Describe("backup/queries tests", func() {
 	BeforeSuite(func() {
 		connection, mock = testutils.CreateAndConnectMockDB()
 	})
-	Describe("GetTableAtts", func() {
+	Describe("GetTableAttributes", func() {
 		header := []string{"attname", "attnotnull", "atthasdef", "attisdropped", "atttypname", "attencoding"}
 		rowOne := []driver.Value{"i", "f", "f", "f", "int", nil}
 		rowTwo := []driver.Value{"j", "f", "f", "f", "character varying(20)", nil}
@@ -34,7 +34,7 @@ var _ = Describe("backup/queries tests", func() {
 		It("returns a slice for a table with one column", func() {
 			fakeResult := sqlmock.NewRows(header).AddRow(rowOne...)
 			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-			results := backup.GetTableAtts(connection, 0)
+			results := backup.GetTableAttributes(connection, 0)
 			Expect(len(results)).To(Equal(1))
 			Expect(results[0].AttName).To(Equal("i"))
 			Expect(results[0].AttHasDef).To(Equal(false))
@@ -43,7 +43,7 @@ var _ = Describe("backup/queries tests", func() {
 		It("returns a slice for a table with two columns", func() {
 			fakeResult := sqlmock.NewRows(header).AddRow(rowOne...).AddRow(rowTwo...)
 			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-			results := backup.GetTableAtts(connection, 0)
+			results := backup.GetTableAttributes(connection, 0)
 			Expect(len(results)).To(Equal(2))
 			Expect(results[0].AttName).To(Equal("i"))
 			Expect(results[0].AttTypName).To(Equal("int"))
@@ -53,7 +53,7 @@ var _ = Describe("backup/queries tests", func() {
 		It("returns a slice for a table with one NOT NULL column with ENCODING", func() {
 			fakeResult := sqlmock.NewRows(header).AddRow(rowOne...).AddRow(rowEncoded...)
 			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-			results := backup.GetTableAtts(connection, 0)
+			results := backup.GetTableAttributes(connection, 0)
 			Expect(len(results)).To(Equal(2))
 			Expect(results[0].AttName).To(Equal("i"))
 			Expect(results[0].AttEncoding.Valid).To(Equal(false))
@@ -64,7 +64,7 @@ var _ = Describe("backup/queries tests", func() {
 		It("returns a slice for a table with one NOT NULL column", func() {
 			fakeResult := sqlmock.NewRows(header).AddRow(rowOne...).AddRow(rowNotNull...)
 			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-			results := backup.GetTableAtts(connection, 0)
+			results := backup.GetTableAttributes(connection, 0)
 			Expect(len(results)).To(Equal(2))
 			Expect(results[0].AttName).To(Equal("i"))
 			Expect(results[0].AttEncoding.Valid).To(Equal(false))
@@ -74,10 +74,10 @@ var _ = Describe("backup/queries tests", func() {
 		It("panics when table does not exist", func() {
 			mock.ExpectQuery("SELECT (.*)").WillReturnError(errors.New("relation \"foo\" does not exist"))
 			defer testutils.ShouldPanicWithMessage("relation \"foo\" does not exist")
-			backup.GetTableAtts(connection, 0)
+			backup.GetTableAttributes(connection, 0)
 		})
 	})
-	Describe("GetTableDefs", func() {
+	Describe("GetTableDefaults", func() {
 		header := []string{"adnum", "defval"}
 		rowOne := []driver.Value{"1", "42"}
 		rowTwo := []driver.Value{"2", "bar"}
@@ -85,7 +85,7 @@ var _ = Describe("backup/queries tests", func() {
 		It("returns a slice for a table with one column having a default value", func() {
 			fakeResult := sqlmock.NewRows(header).AddRow(rowOne...)
 			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-			results := backup.GetTableDefs(connection, 0)
+			results := backup.GetTableDefaults(connection, 0)
 			Expect(len(results)).To(Equal(1))
 			Expect(results[0].AdNum).To(Equal(1))
 			Expect(results[0].DefVal).To(Equal("42"))
@@ -93,7 +93,7 @@ var _ = Describe("backup/queries tests", func() {
 		It("returns a slice for a table with two columns having default values", func() {
 			fakeResult := sqlmock.NewRows(header).AddRow(rowOne...).AddRow(rowTwo...)
 			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-			results := backup.GetTableDefs(connection, 0)
+			results := backup.GetTableDefaults(connection, 0)
 			Expect(len(results)).To(Equal(2))
 			Expect(results[0].AdNum).To(Equal(1))
 			Expect(results[0].DefVal).To(Equal("42"))
@@ -103,7 +103,7 @@ var _ = Describe("backup/queries tests", func() {
 		It("returns a slice for a table with no columns having default values", func() {
 			fakeResult := sqlmock.NewRows(header)
 			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-			results := backup.GetTableDefs(connection, 0)
+			results := backup.GetTableDefaults(connection, 0)
 			Expect(len(results)).To(Equal(0))
 		})
 	})
@@ -264,28 +264,56 @@ var _ = Describe("backup/queries tests", func() {
 			Expect(results).To(Equal(""))
 		})
 	})
-	Describe("GetAOCODefinition", func() {
-		header := []string{"isco"}
-		coRow := []driver.Value{"t"}
-		aoRow := []driver.Value{"f"}
+	Describe("GetStorageOptions", func() {
+		header := []string{"storageoptions"}
+		rowAo := []driver.Value{"(appendonly=true)"}
+		rowCo := []driver.Value{"(appendonly=true, orientation=column)"}
+		rowFill := []driver.Value{"(fillfactor=42)"}
+		rowAoFill := []driver.Value{"(appendonly=true, fillfactor=42)"}
+		rowCoFill := []driver.Value{"(appendonly=true, orientation=column, fillfactor=42)"}
+		rowCoMany := []driver.Value{"(appendonly=true, orientation=column, fillfactor=42, compresstype=zlib, blocksize=32768, compresslevel=1)"}
 
-		It("returns a slice for a column oriented table", func() {
-			fakeResult := sqlmock.NewRows(header).AddRow(coRow...)
+		It("returns a slice for an append-optimized table", func() {
+			fakeResult := sqlmock.NewRows(header).AddRow(rowAo...)
 			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-			results := backup.GetAOCODefinition(connection, 0)
-			Expect(results).To(Equal("(appendonly=true, orientation=column)"))
-		})
-		It("returns a slice for an append only table", func() {
-			fakeResult := sqlmock.NewRows(header).AddRow(aoRow...)
-			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-			results := backup.GetAOCODefinition(connection, 0)
+			results := backup.GetStorageOptions(connection, 0)
 			Expect(results).To(Equal("(appendonly=true)"))
+		})
+		It("returns a slice for a column oriented table", func() {
+			fakeResult := sqlmock.NewRows(header).AddRow(rowCo...)
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
+			results := backup.GetStorageOptions(connection, 0)
+			Expect(results).To(Equal("(appendonly=true, orientation=column)"))
 		})
 		It("returns a slice for a heap table", func() {
 			fakeResult := sqlmock.NewRows(header)
 			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-			results := backup.GetAOCODefinition(connection, 0)
+			results := backup.GetStorageOptions(connection, 0)
 			Expect(results).To(Equal(""))
+		})
+		It("returns a slice for an append-optimized table with a fill factor", func() {
+			fakeResult := sqlmock.NewRows(header).AddRow(rowAoFill...)
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
+			results := backup.GetStorageOptions(connection, 0)
+			Expect(results).To(Equal("(appendonly=true, fillfactor=42)"))
+		})
+		It("returns a slice for a column oriented table with a fill factor", func() {
+			fakeResult := sqlmock.NewRows(header).AddRow(rowCoFill...)
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
+			results := backup.GetStorageOptions(connection, 0)
+			Expect(results).To(Equal("(appendonly=true, orientation=column, fillfactor=42)"))
+		})
+		It("returns a slice for a heap table with a fill factor", func() {
+			fakeResult := sqlmock.NewRows(header).AddRow(rowFill...)
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
+			results := backup.GetStorageOptions(connection, 0)
+			Expect(results).To(Equal("(fillfactor=42)"))
+		})
+		It("returns a slice for a column oriented table with several storage options", func() {
+			fakeResult := sqlmock.NewRows(header).AddRow(rowCoMany...)
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
+			results := backup.GetStorageOptions(connection, 0)
+			Expect(results).To(Equal("(appendonly=true, orientation=column, fillfactor=42, compresstype=zlib, blocksize=32768, compresslevel=1)"))
 		})
 	})
 })

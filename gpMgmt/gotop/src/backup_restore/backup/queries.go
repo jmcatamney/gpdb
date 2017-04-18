@@ -44,7 +44,7 @@ type QueryTableAtts struct {
 	AttEncoding  sql.NullString
 }
 
-func GetTableAtts(connection *utils.DBConn, oid uint32) []QueryTableAtts {
+func GetTableAttributes(connection *utils.DBConn, oid uint32) []QueryTableAtts {
 	query := fmt.Sprintf(`
 SELECT a.attnum,
 	a.attname,
@@ -73,12 +73,14 @@ type QueryTableDefs struct {
 	DefVal string
 }
 
-func GetTableDefs(connection *utils.DBConn, oid uint32) []QueryTableDefs {
+func GetTableDefaults(connection *utils.DBConn, oid uint32) []QueryTableDefs {
 	query := fmt.Sprintf(`
 SELECT adnum,
 	pg_catalog.pg_get_expr(adbin, adrelid) AS defval 
 FROM pg_catalog.pg_attrdef
-WHERE adrelid = %d;`, oid)
+WHERE adrelid = %d
+ORDER BY adrelid,
+	adnum;`, oid)
 
 	results := make([]QueryTableDefs, 0)
 	err := connection.Select(&results, query)
@@ -154,31 +156,27 @@ func GetPartitionDefinition(connection *utils.DBConn, oid uint32) string {
 	if len(results) == 1 {
 		return " " + results[0].PgGetPartitionDef
 	} else if len(results) > 1 {
-		utils.Abort("Too many rows returned from query on pg_appendonly: got %d rows, expected 1 row", len(results))
+		utils.Abort("Too many rows returned from query to get partition definition: got %d rows, expected 1 row", len(results))
 	}
 	return ""
 }
 
-type QueryAOCODef struct {
-	IsCO bool
+type QueryStorageOptions struct {
+	StorageOptions string
 }
 
-func GetAOCODefinition(connection *utils.DBConn, oid uint32) string {
+func GetStorageOptions(connection *utils.DBConn, oid uint32) string {
 	query := fmt.Sprintf(`
-SELECT columnstore AS isco 
-FROM pg_appendonly
+SELECT array_to_string(reloptions, ', ')
+FROM pg_class
 WHERE relid = %d;`, oid)
-	results := make([]QueryAOCODef, 0)
+	results := make([]QueryStorageOptions, 0)
 	err := connection.Select(&results, query)
 	utils.CheckError(err)
 	if len(results) == 1 {
-		if !results[0].IsCO { // Append-Optimized table
-			return "(appendonly=true)"
-		} else { // Append-Optimized Column-Oriented table
-			return "(appendonly=true, orientation=column)"
-		}
+		return results[0].StorageOptions
 	} else if len(results) > 1 {
-		utils.Abort("Too many rows returned from query on pg_appendonly: got %d rows, expected 1 row", len(results))
+		utils.Abort("Too many rows returned from query to get storage options: got %d rows, expected 1 row", len(results))
 	}
-	return "" // Heap table
+	return ""
 }

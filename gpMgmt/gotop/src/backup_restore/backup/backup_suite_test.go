@@ -25,7 +25,7 @@ func gpbackup() *gexec.Session {
 
 func TestBackup(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "gpbackup tests")
+	RunSpecs(t, "backup tests")
 }
 
 var _ = Describe("backup integration tests", func() {
