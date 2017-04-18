@@ -1,7 +1,6 @@
 package backup
 
 import (
-	"backup_restore/utils"
 	"database/sql"
 	"fmt"
 	"io"
@@ -49,19 +48,27 @@ func PrintCreateTableStatement(metadataFile io.Writer, tablename string, columnD
 	}
 	fmt.Fprintf(metadataFile, ") ")
 	if tableDef.StorageOpts != "" {
-		fmt.Fprintf(metadataFile, "WITH %s ", tableDef.StorageOpts)
+		fmt.Fprintf(metadataFile, "WITH (%s) ", tableDef.StorageOpts)
 	}
 	fmt.Fprintf(metadataFile, "%s", tableDef.DistPolicy)
 	fmt.Fprintf(metadataFile, "%s;\n", tableDef.PartDef)
 }
 
 func ConsolidateColumnInfo(atts []QueryTableAtts, defs []QueryTableDefs) []ColumnDefinition {
-	if len(atts) != len(defs) {
-		utils.Abort("Attributes array and defaults array must have the same length (attributes length %d, defaults length %d", len(atts), len(defs))
-	}
 	colDefs := make([]ColumnDefinition, 0)
 	// The queries to get attributes and defaults ORDER BY oid and then attribute number, so we can assume the arrays are in the same order without sorting
+	j := 0
 	for i := range atts {
+		defVal := ""
+		if atts[i].AttHasDef {
+			for j < len(defs) {
+				if atts[i].AttNum == defs[j].AdNum {
+					defVal = defs[j].DefVal
+					break
+				}
+				j += 1
+			}
+		}
 		colDef := ColumnDefinition{
 			Num:       atts[i].AttNum,
 			Name:      atts[i].AttName,
@@ -70,7 +77,7 @@ func ConsolidateColumnInfo(atts []QueryTableAtts, defs []QueryTableDefs) []Colum
 			IsDropped: atts[i].AttIsDropped,
 			TypName:   atts[i].AttTypName,
 			Encoding:  atts[i].AttEncoding,
-			DefVal:    defs[i].DefVal,
+			DefVal:    defVal,
 		}
 		colDefs = append(colDefs, colDef)
 	}

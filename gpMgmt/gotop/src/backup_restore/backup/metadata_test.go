@@ -38,10 +38,10 @@ var _ = Describe("backup/metadata tests", func() {
 		emptyPartDef := ""
 
 		heapOpts := ""
-		aoOpts := "(appendonly=true)"
-		coOpts := "(appendonly=true, orientation=column)"
-		heapFillOpts := "(fillfactor=42)"
-		coManyOpts := "(appendonly=true, orientation=column, fillfactor=42, compresstype=zlib, blocksize=32768, compresslevel=1)"
+		aoOpts := "appendonly=true"
+		coOpts := "appendonly=true, orientation=column"
+		heapFillOpts := "fillfactor=42"
+		coManyOpts := "appendonly=true, orientation=column, fillfactor=42, compresstype=zlib, blocksize=32768, compresslevel=1"
 
 		Context("No special table attributes", func() {
 			It("prints a CREATE TABLE block with one line", func() {
@@ -393,6 +393,82 @@ var _ = Describe("backup/metadata tests", func() {
 				Expect(cons[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_pkey PRIMARY KEY (i, j);"))
 				Expect(fkCons[0]).To(Equal("\n\nALTER TABLE ONLY tablename ADD CONSTRAINT tablename_i_fkey FOREIGN KEY (i) REFERENCES other_tablename(a);"))
 			})
+		})
+	})
+	Describe("ConsolidateColumnInfo", func() {
+		attsOne := backup.QueryTableAtts{1, "i", false, false, false, "int", sql.NullString{String: "", Valid: false}}
+		attsTwo := backup.QueryTableAtts{2, "j", false, false, false, "int", sql.NullString{String: "", Valid: false}}
+		attsThree := backup.QueryTableAtts{3, "k", false, false, false, "int", sql.NullString{String: "", Valid: false}}
+		attsOneDef := backup.QueryTableAtts{1, "i", false, true, false, "int", sql.NullString{String: "", Valid: false}}
+		attsTwoDef := backup.QueryTableAtts{2, "j", false, true, false, "int", sql.NullString{String: "", Valid: false}}
+		attsThreeDef := backup.QueryTableAtts{3, "k", false, true, false, "int", sql.NullString{String: "", Valid: false}}
+
+		defsOne := backup.QueryTableDefs{1, "1"}
+		defsTwo := backup.QueryTableDefs{2, "2"}
+		defsThree := backup.QueryTableDefs{3, "3"}
+		It("has no DEFAULT columns", func() {
+			atts := []backup.QueryTableAtts{attsOne, attsTwo, attsThree}
+			defs := []backup.QueryTableDefs{}
+			info := backup.ConsolidateColumnInfo(atts, defs)
+			Expect(info[0].DefVal).To(Equal(""))
+			Expect(info[1].DefVal).To(Equal(""))
+			Expect(info[2].DefVal).To(Equal(""))
+		})
+		It("has one DEFAULT column (i)", func() {
+			atts := []backup.QueryTableAtts{attsOneDef, attsTwo, attsThree}
+			defs := []backup.QueryTableDefs{defsOne}
+			info := backup.ConsolidateColumnInfo(atts, defs)
+			Expect(info[0].DefVal).To(Equal("1"))
+			Expect(info[1].DefVal).To(Equal(""))
+			Expect(info[2].DefVal).To(Equal(""))
+		})
+		It("has one DEFAULT column (j)", func() {
+			atts := []backup.QueryTableAtts{attsOne, attsTwoDef, attsThree}
+			defs := []backup.QueryTableDefs{defsTwo}
+			info := backup.ConsolidateColumnInfo(atts, defs)
+			Expect(info[0].DefVal).To(Equal(""))
+			Expect(info[1].DefVal).To(Equal("2"))
+			Expect(info[2].DefVal).To(Equal(""))
+		})
+		It("has one DEFAULT column (k)", func() {
+			atts := []backup.QueryTableAtts{attsOne, attsTwo, attsThreeDef}
+			defs := []backup.QueryTableDefs{defsThree}
+			info := backup.ConsolidateColumnInfo(atts, defs)
+			Expect(info[0].DefVal).To(Equal(""))
+			Expect(info[1].DefVal).To(Equal(""))
+			Expect(info[2].DefVal).To(Equal("3"))
+		})
+		It("has two DEFAULT columns (i and j)", func() {
+			atts := []backup.QueryTableAtts{attsOneDef, attsTwoDef, attsThree}
+			defs := []backup.QueryTableDefs{defsOne, defsTwo}
+			info := backup.ConsolidateColumnInfo(atts, defs)
+			Expect(info[0].DefVal).To(Equal("1"))
+			Expect(info[1].DefVal).To(Equal("2"))
+			Expect(info[2].DefVal).To(Equal(""))
+		})
+		It("has two DEFAULT columns (j and k)", func() {
+			atts := []backup.QueryTableAtts{attsOne, attsTwoDef, attsThreeDef}
+			defs := []backup.QueryTableDefs{defsTwo, defsThree}
+			info := backup.ConsolidateColumnInfo(atts, defs)
+			Expect(info[0].DefVal).To(Equal(""))
+			Expect(info[1].DefVal).To(Equal("2"))
+			Expect(info[2].DefVal).To(Equal("3"))
+		})
+		It("has two DEFAULT columns (i and k)", func() {
+			atts := []backup.QueryTableAtts{attsOneDef, attsTwo, attsThreeDef}
+			defs := []backup.QueryTableDefs{defsOne, defsThree}
+			info := backup.ConsolidateColumnInfo(atts, defs)
+			Expect(info[0].DefVal).To(Equal("1"))
+			Expect(info[1].DefVal).To(Equal(""))
+			Expect(info[2].DefVal).To(Equal("3"))
+		})
+		It("has all DEFAULT columns", func() {
+			atts := []backup.QueryTableAtts{attsOneDef, attsTwoDef, attsThreeDef}
+			defs := []backup.QueryTableDefs{defsOne, defsTwo, defsThree}
+			info := backup.ConsolidateColumnInfo(atts, defs)
+			Expect(info[0].DefVal).To(Equal("1"))
+			Expect(info[1].DefVal).To(Equal("2"))
+			Expect(info[2].DefVal).To(Equal("3"))
 		})
 	})
 })

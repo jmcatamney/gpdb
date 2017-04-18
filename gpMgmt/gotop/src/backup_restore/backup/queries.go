@@ -162,19 +162,19 @@ func GetPartitionDefinition(connection *utils.DBConn, oid uint32) string {
 }
 
 type QueryStorageOptions struct {
-	StorageOptions string
+	StorageOptions sql.NullString
 }
 
 func GetStorageOptions(connection *utils.DBConn, oid uint32) string {
 	query := fmt.Sprintf(`
-SELECT array_to_string(reloptions, ', ')
+SELECT array_to_string(reloptions, ', ') as storageoptions
 FROM pg_class
-WHERE relid = %d;`, oid)
+WHERE oid = %d AND reloptions IS NOT NULL;`, oid)
 	results := make([]QueryStorageOptions, 0)
 	err := connection.Select(&results, query)
 	utils.CheckError(err)
 	if len(results) == 1 {
-		return results[0].StorageOptions
+		return results[0].StorageOptions.String
 	} else if len(results) > 1 {
 		utils.Abort("Too many rows returned from query to get storage options: got %d rows, expected 1 row", len(results))
 	}
