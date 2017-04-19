@@ -30,7 +30,7 @@ JOIN pg_exttable e
 WHERE e.reloid IS NULL)
 AND (c.relnamespace > 16384
 OR n.nspname = 'public')
-ORDER BY c.oid;`
+ORDER BY schemaname, tablename;`
 
 	results := make([]utils.Table, 0)
 
