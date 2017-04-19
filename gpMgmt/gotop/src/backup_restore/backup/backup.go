@@ -32,11 +32,14 @@ func DoBackup() {
 	for _, table := range tables {
 		tableAttributes := GetTableAttributes(connection, table.Oid)
 		tableDefaults := GetTableDefaults(connection, table.Oid)
+
 		distPolicy := GetDistributionPolicy(connection, table.Oid)
 		partitionDef := GetPartitionDefinition(connection, table.Oid)
+		partTemplateDef := GetPartitionTemplateDefinition(connection, table.Oid)
 		storageOpts := GetStorageOptions(connection, table.Oid)
+
 		columnDefs := ConsolidateColumnInfo(tableAttributes, tableDefaults)
-		tableDef := TableDefinition{distPolicy, partitionDef, storageOpts}
+		tableDef := TableDefinition{distPolicy, partitionDef, partTemplateDef, storageOpts}
 		PrintCreateTableStatement(os.Stdout, table.Tablename, columnDefs, tableDef) // TODO: Change to write to file
 	}
 	for _, table := range tables {

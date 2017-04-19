@@ -248,33 +248,16 @@ var _ = Describe("backup/queries tests", func() {
 		})
 	})
 	Describe("GetPartitionDefinition", func() {
-		header := []string{"pg_get_partition_def"}
-		partListRow := []driver.Value{`PARTITION BY LIST(gender)
-	(
-	PARTITION girls VALUES('F') WITH (tablename='rank_1_prt_girls', appendonly=false ),
-	PARTITION boys VALUES('M') WITH (tablename='rank_1_prt_boys', appendonly=false ),
-	DEFAULT PARTITION other  WITH (tablename='rank_1_prt_other', appendonly=false )
-	);`}
-		partRangeRow := []driver.Value{`PARTITION BY RANGE(year)
+		header := []string{"partitiondef"}
+		partRow := []driver.Value{`PARTITION BY RANGE(year)
 	(
 	START (2001) END (2002) EVERY (1) WITH (tablename='rank_1_prt_2', appendonly=false ),
 	START (2002) END (2003) EVERY (1) WITH (tablename='rank_1_prt_3', appendonly=false ),
 	DEFAULT PARTITION extra  WITH (tablename='rank_1_prt_extra', appendonly=false )
 	);`}
 
-		It("returns a partition definition for a LIST partition table", func() {
-			fakeResult := sqlmock.NewRows(header).AddRow(partListRow...)
-			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
-			result := backup.GetPartitionDefinition(connection, 0)
-			Expect(result).To(Equal(`PARTITION BY LIST(gender)
-	(
-	PARTITION girls VALUES('F') WITH (tablename='rank_1_prt_girls', appendonly=false ),
-	PARTITION boys VALUES('M') WITH (tablename='rank_1_prt_boys', appendonly=false ),
-	DEFAULT PARTITION other  WITH (tablename='rank_1_prt_other', appendonly=false )
-	);`))
-		})
-		It("returns a partition definition for a RANGE partition table", func() {
-			fakeResult := sqlmock.NewRows(header).AddRow(partRangeRow...)
+		It("returns a partition definition for a partition table", func() {
+			fakeResult := sqlmock.NewRows(header).AddRow(partRow...)
 			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
 			result := backup.GetPartitionDefinition(connection, 0)
 			Expect(result).To(Equal(`PARTITION BY RANGE(year)
@@ -284,10 +267,43 @@ var _ = Describe("backup/queries tests", func() {
 	DEFAULT PARTITION extra  WITH (tablename='rank_1_prt_extra', appendonly=false )
 	);`))
 		})
-		It("returns empty string for a non partition table", func() {
+		It("returns empty string for a non-partition table", func() {
 			fakeResult := sqlmock.NewRows(header)
 			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
 			result := backup.GetPartitionDefinition(connection, 0)
+			Expect(result).To(Equal(""))
+		})
+	})
+	Describe("GetPartitionTemplateDefinition", func() {
+		header := []string{"partitiondef"}
+		partRow := []driver.Value{`ALTER TABLE tablename
+SET SUBPARTITION TEMPLATE
+          (
+          SUBPARTITION usa VALUES('usa') WITH (tablename='tablename'),
+          SUBPARTITION asia VALUES('asia') WITH (tablename='tablename'),
+          SUBPARTITION europe VALUES('europe') WITH (tablename='tablename'),
+          DEFAULT SUBPARTITION other_regions  WITH (tablename='tablename')
+          )
+`}
+
+		It("returns a subpartition template definition for a multi-level partition table", func() {
+			fakeResult := sqlmock.NewRows(header).AddRow(partRow...)
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
+			result := backup.GetPartitionTemplateDefinition(connection, 0)
+			Expect(result).To(Equal(`ALTER TABLE tablename
+SET SUBPARTITION TEMPLATE
+          (
+          SUBPARTITION usa VALUES('usa') WITH (tablename='tablename'),
+          SUBPARTITION asia VALUES('asia') WITH (tablename='tablename'),
+          SUBPARTITION europe VALUES('europe') WITH (tablename='tablename'),
+          DEFAULT SUBPARTITION other_regions  WITH (tablename='tablename')
+          )
+`))
+		})
+		It("returns empty string for a non-partition table", func() {
+			fakeResult := sqlmock.NewRows(header)
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
+			result := backup.GetPartitionTemplateDefinition(connection, 0)
 			Expect(result).To(Equal(""))
 		})
 	})

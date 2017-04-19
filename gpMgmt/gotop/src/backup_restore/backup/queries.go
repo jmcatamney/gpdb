@@ -150,11 +150,11 @@ WHERE a.attrelid = %d;`, oid)
 }
 
 type QueryPartDef struct {
-	PartitionDef string `db:"pg_get_partition_def"`
+	PartitionDef string
 }
 
 func GetPartitionDefinition(connection *utils.DBConn, oid uint32) string {
-	query := fmt.Sprintf("SELECT * from pg_get_partition_def(%d, true, true) where pg_get_partition_def IS NOT NULL", oid)
+	query := fmt.Sprintf("SELECT * FROM pg_get_partition_def(%d, true, true) AS partitiondef WHERE partitiondef IS NOT NULL", oid)
 	results := make([]QueryPartDef, 0)
 	err := connection.Select(&results, query)
 	utils.CheckError(err)
@@ -162,6 +162,19 @@ func GetPartitionDefinition(connection *utils.DBConn, oid uint32) string {
 		return results[0].PartitionDef
 	} else if len(results) > 1 {
 		utils.Abort("Too many rows returned from query to get partition definition: got %d rows, expected 1 row", len(results))
+	}
+	return ""
+}
+
+func GetPartitionTemplateDefinition(connection *utils.DBConn, oid uint32) string {
+	query := fmt.Sprintf("SELECT * FROM pg_get_partition_template_def(%d, true, true) AS partitiondef WHERE partitiondef IS NOT NULL", oid)
+	results := make([]QueryPartDef, 0)
+	err := connection.Select(&results, query)
+	utils.CheckError(err)
+	if len(results) == 1 {
+		return results[0].PartitionDef
+	} else if len(results) > 1 {
+		utils.Abort("Too many rows returned from query to get partition template definition: got %d rows, expected 1 row", len(results))
 	}
 	return ""
 }

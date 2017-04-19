@@ -20,9 +20,10 @@ type ColumnDefinition struct {
 }
 
 type TableDefinition struct {
-	DistPolicy  string
-	PartDef     string
-	StorageOpts string
+	DistPolicy      string
+	PartDef         string
+	PartTemplateDef string
+	StorageOpts     string
 }
 
 func PrintCreateTableStatement(metadataFile io.Writer, tablename string, columnDefs []ColumnDefinition, tableDef TableDefinition) {
@@ -52,9 +53,12 @@ func PrintCreateTableStatement(metadataFile io.Writer, tablename string, columnD
 	}
 	fmt.Fprintf(metadataFile, "%s", tableDef.DistPolicy)
 	if tableDef.PartDef != "" {
-		fmt.Fprintf(metadataFile, " %s", tableDef.PartDef)
+		fmt.Fprintf(metadataFile, " %s", strings.TrimSpace(tableDef.PartDef))
 	}
-	fmt.Fprintf(metadataFile, ";\n")
+	fmt.Fprintln(metadataFile, ";")
+	if tableDef.PartTemplateDef != "" {
+		fmt.Fprintf(metadataFile, "%s;\n", strings.TrimSpace(tableDef.PartTemplateDef))
+	}
 }
 
 func ConsolidateColumnInfo(atts []QueryTableAtts, defs []QueryTableDefs) []ColumnDefinition {
