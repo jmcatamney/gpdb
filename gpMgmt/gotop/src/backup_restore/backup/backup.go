@@ -29,6 +29,7 @@ func DoBackup() {
 	allConstraints := make([]string, 0)
 	allFkConstraints := make([]string, 0) // Slice for FOREIGN KEY allConstraints, since they must be printed after PRIMARY KEY allConstraints
 	tables := GetAllUserTables(connection)
+	PrintCreateSchemaStatements(os.Stdout, tables)
 	for _, table := range tables {
 		tableAttributes := GetTableAttributes(connection, table.Oid)
 		tableDefaults := GetTableDefaults(connection, table.Oid)
@@ -40,11 +41,11 @@ func DoBackup() {
 
 		columnDefs := ConsolidateColumnInfo(tableAttributes, tableDefaults)
 		tableDef := TableDefinition{distPolicy, partitionDef, partTemplateDef, storageOpts}
-		PrintCreateTableStatement(os.Stdout, table.Tablename, columnDefs, tableDef) // TODO: Change to write to file
+		PrintCreateTableStatement(os.Stdout, table, columnDefs, tableDef) // TODO: Change to write to file
 	}
 	for _, table := range tables {
 		conList := GetConstraints(connection, table.Oid)
-		tableCons, tableFkCons := ProcessConstraints(table.Tablename, conList)
+		tableCons, tableFkCons := ProcessConstraints(table, conList)
 		allConstraints = append(allConstraints, tableCons...)
 		allFkConstraints = append(allFkConstraints, tableFkCons...)
 	}

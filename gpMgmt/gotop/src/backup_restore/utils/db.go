@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/user"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -30,6 +31,21 @@ type Table struct {
 
 func (table Table) ToFQN() string {
 	return fmt.Sprintf("%s.%s", table.Schemaname, table.Tablename); // TODO: handle special character escaping here
+}
+
+func GetUniqueSchemas(tables []Table) []string {
+	schemaMap := make(map[string]bool, 0)
+	for _, table := range tables {
+		schemaMap[table.Schemaname] = true
+	}
+	schemas := make([]string, 0)
+	for schema := range schemaMap {
+		if schema != "public" {
+			schemas = append(schemas, schema)
+		}
+	}
+	sort.Strings(schemas)
+	return schemas
 }
 
 func NewDBConn(dbname string) *DBConn {

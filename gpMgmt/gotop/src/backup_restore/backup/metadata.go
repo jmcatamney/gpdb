@@ -1,6 +1,7 @@
 package backup
 
 import (
+	"backup_restore/utils"
 	"database/sql"
 	"fmt"
 	"io"
@@ -26,8 +27,8 @@ type TableDefinition struct {
 	StorageOpts     string
 }
 
-func PrintCreateTableStatement(metadataFile io.Writer, tablename string, columnDefs []ColumnDefinition, tableDef TableDefinition) {
-	fmt.Fprintf(metadataFile, "\n\nCREATE TABLE %s (\n", tablename)
+func PrintCreateTableStatement(metadataFile io.Writer, table utils.Table, columnDefs []ColumnDefinition, tableDef TableDefinition) {
+	fmt.Fprintf(metadataFile, "\n\nCREATE TABLE %s (\n", table.ToFQN())
 	lines := make([]string, 0)
 	for _, col := range columnDefs {
 		if !col.IsDropped {
@@ -73,7 +74,7 @@ func ConsolidateColumnInfo(atts []QueryTableAtts, defs []QueryTableDefs) []Colum
 					defVal = defs[j].DefVal
 					break
 				}
-				j += 1
+				j++
 			}
 		}
 		colDef := ColumnDefinition{
@@ -102,8 +103,8 @@ func PrintConstraintStatements(metadataFile io.Writer, cons []string, fkCons []s
 	}
 }
 
-func ProcessConstraints(tablename string, constraints []QueryConstraint) ([]string, []string) {
-	alterStr := fmt.Sprintf("\n\nALTER TABLE ONLY %s ADD CONSTRAINT", tablename)
+func ProcessConstraints(table utils.Table, constraints []QueryConstraint) ([]string, []string) {
+	alterStr := fmt.Sprintf("\n\nALTER TABLE ONLY %s ADD CONSTRAINT", table.ToFQN())
 	cons := make([]string, 0)
 	fkCons := make([]string, 0)
 	for _, constraint := range constraints {
@@ -115,4 +116,11 @@ func ProcessConstraints(tablename string, constraints []QueryConstraint) ([]stri
 		}
 	}
 	return cons, fkCons
+}
+
+func PrintCreateSchemaStatements(metadataFile io.Writer, tables []utils.Table) {
+	schemas := utils.GetUniqueSchemas(tables)
+	for _, schema := range schemas {
+		fmt.Fprintf(metadataFile, "\n\nCREATE SCHEMA %s;", schema)
+	}
 }
