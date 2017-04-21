@@ -30,7 +30,7 @@ type Table struct {
 }
 
 func (table Table) ToFQN() string {
-	return fmt.Sprintf("%s.%s", table.Schemaname, table.Tablename); // TODO: handle special character escaping here
+	return fmt.Sprintf("%s.%s", table.Schemaname, table.Tablename) // TODO: handle special character escaping here
 }
 
 func GetUniqueSchemas(tables []Table) []string {
