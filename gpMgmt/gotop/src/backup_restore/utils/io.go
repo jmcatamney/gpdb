@@ -8,13 +8,13 @@ import (
 
 var (
 	FPGetUserAndHostInfo = GetUserAndHostInfo
-	FPOsIsNotExist = os.IsNotExist
-	FPOsMkdir= os.Mkdir
-	FPOsCreate = os.Create
-	FPOsStat = os.Stat
+	FPOsIsNotExist       = os.IsNotExist
+	FPOsMkdir            = os.Mkdir
+	FPOsCreate           = os.Create
+	FPOsStat             = os.Stat
 
 	FPDirectoryMustExist = DirectoryMustExist
-	FPMustOpenFile = MustOpenFile
+	FPMustOpenFile       = MustOpenFile
 )
 
 func DirectoryMustExist(dirname string) {

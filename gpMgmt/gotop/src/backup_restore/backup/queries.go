@@ -11,22 +11,22 @@ func GetAllUserTables(connection *utils.DBConn) []utils.Table {
 	query := `
 SELECT
 	c.oid,
-  n.nspname AS schemaname,
-  c.relname AS tablename
+	n.nspname AS schemaname,
+	c.relname AS tablename
 FROM pg_class c
 LEFT JOIN pg_partition_rule pr
-  ON c.oid = pr.parchildrelid
+	ON c.oid = pr.parchildrelid
 LEFT JOIN pg_partition p
-  ON pr.paroid = p.oid
+	ON pr.paroid = p.oid
 LEFT JOIN pg_namespace n
-  ON c.relnamespace = n.oid
+	ON c.relnamespace = n.oid
 WHERE relkind = 'r'
 AND c.oid NOT IN (SELECT
-  p.parchildrelid
+	p.parchildrelid
 FROM pg_partition_rule p
 LEFT
 JOIN pg_exttable e
-  ON p.parchildrelid = e.reloid
+	ON p.parchildrelid = e.reloid
 WHERE e.reloid IS NULL)
 AND (c.relnamespace > 16384
 OR n.nspname = 'public')

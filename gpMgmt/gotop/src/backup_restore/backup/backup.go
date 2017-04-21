@@ -8,12 +8,12 @@ import (
 
 var (
 	connection *utils.DBConn
-	logger *utils.Logger
+	logger     *utils.Logger
 )
 
 var ( // Command-line flags
-	dbname = flag.String("dbname", "", "The database to be backed up")
-	debug = flag.Bool("debug", false, "Print verbose and debug log messages")
+	dbname  = flag.String("dbname", "", "The database to be backed up")
+	debug   = flag.Bool("debug", false, "Print verbose and debug log messages")
 	verbose = flag.Bool("verbose", false, "Print verbose log messages")
 )
 

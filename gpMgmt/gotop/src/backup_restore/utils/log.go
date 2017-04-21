@@ -10,11 +10,11 @@ import (
 var (
 	logger *Logger
 
-	defaultLogDir = "gpAdminLogs"
+	defaultLogDir   = "gpAdminLogs"
 	headerFormatStr = "%s:%s:%s:%06d-[%s]:-" // PROGRAMNAME:USERNAME:HOSTNAME:PID-[LOGLEVEL]:-, to match gpcrondump
 
 	FPSetLogger = SetLogger
-	FPOsGetpid = os.Getpid
+	FPOsGetpid  = os.Getpid
 )
 
 const ( // Constants representing the current logging level
@@ -27,9 +27,9 @@ const ( // Constants representing the current logging level
 type Logger struct {
 	logStdout *log.Logger
 	logStderr *log.Logger
-	logFile *log.Logger
+	logFile   *log.Logger
 	verbosity int
-	header string
+	header    string
 }
 
 // stdout and stderr are passed in to enable redirection for testing
@@ -40,9 +40,9 @@ func NewLogger(stdout io.Writer, stderr io.Writer, logFile io.Writer, verbosity 
 	return &Logger{
 		logStdout: log.New(stdout, "", 0),
 		logStderr: log.New(stderr, "", 0),
-		logFile: log.New(logFile, "", 0),
+		logFile:   log.New(logFile, "", 0),
 		verbosity: verbosity,
-		header: header,
+		header:    header,
 	}
 }
 
