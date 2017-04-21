@@ -50,31 +50,17 @@ func backupMetadata(filename string) {
 	metadataFile := utils.MustOpenFile(filename)
 	connection.Begin()
 
-	allConstraints := make([]string, 0)
-	allFkConstraints := make([]string, 0) // Slice for FOREIGN KEY allConstraints, since they must be printed after PRIMARY KEY allConstraints
 	tables := GetAllUserTables(connection)
+	logger.Verbose("Writing CREATE SCHEMA statements to metadata file")
 	PrintCreateSchemaStatements(metadataFile, tables)
-	logger.Info("Writing CREATE TABLE statements to metadata file")
+	logger.Verbose("Writing CREATE TABLE statements to metadata file")
 	for _, table := range tables {
-		tableAttributes := GetTableAttributes(connection, table.Oid)
-		tableDefaults := GetTableDefaults(connection, table.Oid)
-
-		distPolicy := GetDistributionPolicy(connection, table.Oid)
-		partitionDef := GetPartitionDefinition(connection, table.Oid)
-		partTemplateDef := GetPartitionTemplateDefinition(connection, table.Oid)
-		storageOpts := GetStorageOptions(connection, table.Oid)
-
-		columnDefs := ConsolidateColumnInfo(tableAttributes, tableDefaults)
-		tableDef := TableDefinition{distPolicy, partitionDef, partTemplateDef, storageOpts}
+		columnDefs, tableDef := ConstructDefinitionsForTable(connection, table)
 		PrintCreateTableStatement(metadataFile, table, columnDefs, tableDef)
 	}
-	logger.Info("Writing ADD CONSTRAINT statements to metadata file")
-	for _, table := range tables {
-		conList := GetConstraints(connection, table.Oid)
-		tableCons, tableFkCons := ProcessConstraints(table, conList)
-		allConstraints = append(allConstraints, tableCons...)
-		allFkConstraints = append(allFkConstraints, tableFkCons...)
-	}
+
+	logger.Verbose("Writing ADD CONSTRAINT statements to metadata file")
+	allConstraints, allFkConstraints := ConstructConstraintsForAllTables(connection, tables)
 	PrintConstraintStatements(metadataFile, allConstraints, allFkConstraints)
 
 	connection.Commit()
