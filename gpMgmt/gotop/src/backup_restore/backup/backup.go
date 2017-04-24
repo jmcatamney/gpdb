@@ -41,16 +41,25 @@ func DoBackup() {
 	logger.Info("Database Size = %s", connection.GetDBSize())
 
 	metadataFilename := "/tmp/metadata.sql"
+	postdataFilename := "/tmp/postdata.sql"
+
+	connection.Begin()
+	tables := GetAllUserTables(connection)
+
 	logger.Info("Writing metadata to %s", metadataFilename)
-	backupMetadata(metadataFilename)
+	backupMetadata(metadataFilename, tables)
 	logger.Info("Metadata dump complete")
+
+	logger.Info("Writing post-data metadata to %s", postdataFilename)
+	backupPostdata(postdataFilename, tables)
+	logger.Info("Post-data metadata dump complete")
+
+	connection.Commit()
 }
 
-func backupMetadata(filename string) {
+func backupMetadata(filename string, tables []utils.Table) {
 	metadataFile := utils.MustOpenFile(filename)
-	connection.Begin()
 
-	tables := GetAllUserTables(connection)
 	logger.Verbose("Writing CREATE SCHEMA statements to metadata file")
 	PrintCreateSchemaStatements(metadataFile, tables)
 	logger.Verbose("Writing CREATE TABLE statements to metadata file")
@@ -62,8 +71,6 @@ func backupMetadata(filename string) {
 	logger.Verbose("Writing ADD CONSTRAINT statements to metadata file")
 	allConstraints, allFkConstraints := ConstructConstraintsForAllTables(connection, tables)
 	PrintConstraintStatements(metadataFile, allConstraints, allFkConstraints)
-
-	connection.Commit()
 }
 
 func DoTeardown() {
