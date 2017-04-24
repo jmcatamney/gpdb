@@ -98,8 +98,8 @@ func ProcessConstraints(table utils.Table, constraints []QueryConstraint) ([]str
 	return cons, fkCons
 }
 
-func PrintCreateTableStatement(metadataFile io.Writer, table utils.Table, columnDefs []ColumnDefinition, tableDef TableDefinition) {
-	fmt.Fprintf(metadataFile, "\n\nCREATE TABLE %s (\n", table.ToFQN())
+func PrintCreateTableStatement(predataFile io.Writer, table utils.Table, columnDefs []ColumnDefinition, tableDef TableDefinition) {
+	fmt.Fprintf(predataFile, "\n\nCREATE TABLE %s (\n", table.ToFQN())
 	lines := make([]string, 0)
 	for _, col := range columnDefs {
 		if !col.IsDropped {
@@ -117,36 +117,36 @@ func PrintCreateTableStatement(metadataFile io.Writer, table utils.Table, column
 		}
 	}
 	if len(lines) > 0 {
-		fmt.Fprintln(metadataFile, strings.Join(lines, ",\n"))
+		fmt.Fprintln(predataFile, strings.Join(lines, ",\n"))
 	}
-	fmt.Fprintf(metadataFile, ") ")
+	fmt.Fprintf(predataFile, ") ")
 	if tableDef.StorageOpts != "" {
-		fmt.Fprintf(metadataFile, "WITH (%s) ", tableDef.StorageOpts)
+		fmt.Fprintf(predataFile, "WITH (%s) ", tableDef.StorageOpts)
 	}
-	fmt.Fprintf(metadataFile, "%s", tableDef.DistPolicy)
+	fmt.Fprintf(predataFile, "%s", tableDef.DistPolicy)
 	if tableDef.PartDef != "" {
-		fmt.Fprintf(metadataFile, " %s", strings.TrimSpace(tableDef.PartDef))
+		fmt.Fprintf(predataFile, " %s", strings.TrimSpace(tableDef.PartDef))
 	}
-	fmt.Fprintln(metadataFile, ";")
+	fmt.Fprintln(predataFile, ";")
 	if tableDef.PartTemplateDef != "" {
-		fmt.Fprintf(metadataFile, "%s;\n", strings.TrimSpace(tableDef.PartTemplateDef))
+		fmt.Fprintf(predataFile, "%s;\n", strings.TrimSpace(tableDef.PartTemplateDef))
 	}
 }
 
-func PrintConstraintStatements(metadataFile io.Writer, cons []string, fkCons []string) {
+func PrintConstraintStatements(predataFile io.Writer, cons []string, fkCons []string) {
 	sort.Strings(cons)
 	sort.Strings(fkCons)
 	for _, con := range cons {
-		fmt.Fprintln(metadataFile, con)
+		fmt.Fprintln(predataFile, con)
 	}
 	for _, con := range fkCons {
-		fmt.Fprintln(metadataFile, con)
+		fmt.Fprintln(predataFile, con)
 	}
 }
 
-func PrintCreateSchemaStatements(metadataFile io.Writer, tables []utils.Table) {
+func PrintCreateSchemaStatements(predataFile io.Writer, tables []utils.Table) {
 	schemas := utils.GetUniqueSchemas(tables)
 	for _, schema := range schemas {
-		fmt.Fprintf(metadataFile, "\n\nCREATE SCHEMA %s;", schema)
+		fmt.Fprintf(predataFile, "\n\nCREATE SCHEMA %s;", schema)
 	}
 }

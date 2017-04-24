@@ -40,37 +40,37 @@ func DoBackup() {
 	logger.Info("Dump Database = %s", connection.DBName)
 	logger.Info("Database Size = %s", connection.GetDBSize())
 
-	metadataFilename := "/tmp/metadata.sql"
+	predataFilename := "/tmp/metadata.sql"
 	postdataFilename := "/tmp/postdata.sql"
 
 	connection.Begin()
 	tables := GetAllUserTables(connection)
 
-	logger.Info("Writing metadata to %s", metadataFilename)
-	backupMetadata(metadataFilename, tables)
-	logger.Info("Metadata dump complete")
+	logger.Info("Writing predata to %s", predataFilename)
+	backupPredata(predataFilename, tables)
+	logger.Info("Predata dump complete")
 
-	logger.Info("Writing post-data metadata to %s", postdataFilename)
+	logger.Info("Writing post-data predata to %s", postdataFilename)
 	backupPostdata(postdataFilename, tables)
-	logger.Info("Post-data metadata dump complete")
+	logger.Info("Post-data predata dump complete")
 
 	connection.Commit()
 }
 
-func backupMetadata(filename string, tables []utils.Table) {
-	metadataFile := utils.MustOpenFile(filename)
+func backupPredata(filename string, tables []utils.Table) {
+	predataFile := utils.MustOpenFile(filename)
 
-	logger.Verbose("Writing CREATE SCHEMA statements to metadata file")
-	PrintCreateSchemaStatements(metadataFile, tables)
-	logger.Verbose("Writing CREATE TABLE statements to metadata file")
+	logger.Verbose("Writing CREATE SCHEMA statements to predata file")
+	PrintCreateSchemaStatements(predataFile, tables)
+	logger.Verbose("Writing CREATE TABLE statements to predata file")
 	for _, table := range tables {
 		columnDefs, tableDef := ConstructDefinitionsForTable(connection, table)
-		PrintCreateTableStatement(metadataFile, table, columnDefs, tableDef)
+		PrintCreateTableStatement(predataFile, table, columnDefs, tableDef)
 	}
 
-	logger.Verbose("Writing ADD CONSTRAINT statements to metadata file")
+	logger.Verbose("Writing ADD CONSTRAINT statements to predata file")
 	allConstraints, allFkConstraints := ConstructConstraintsForAllTables(connection, tables)
-	PrintConstraintStatements(metadataFile, allConstraints, allFkConstraints)
+	PrintConstraintStatements(predataFile, allConstraints, allFkConstraints)
 }
 
 func DoTeardown() {
