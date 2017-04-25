@@ -53,7 +53,7 @@ func ConstructConstraintsForAllTables(connection *utils.DBConn, tables []utils.T
 	return allConstraints, allFkConstraints
 }
 
-func ConsolidateColumnInfo(atts []QueryTableAtts, defs []QueryTableDefs) []ColumnDefinition {
+func ConsolidateColumnInfo(atts []QueryTableAtts, defs []QueryTableDef) []ColumnDefinition {
 	colDefs := make([]ColumnDefinition, 0)
 	// The queries to get attributes and defaults ORDER BY oid and then attribute number, so we can assume the arrays are in the same order without sorting
 	j := 0

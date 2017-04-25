@@ -73,12 +73,12 @@ ORDER BY a.attrelid,
 	return results
 }
 
-type QueryTableDefs struct {
+type QueryTableDef struct {
 	AdNum  int
 	DefVal string
 }
 
-func GetTableDefaults(connection *utils.DBConn, oid uint32) []QueryTableDefs {
+func GetTableDefaults(connection *utils.DBConn, oid uint32) []QueryTableDef {
 	query := fmt.Sprintf(`
 SELECT adnum,
 	pg_catalog.pg_get_expr(adbin, adrelid) AS defval 
@@ -87,7 +87,7 @@ WHERE adrelid = %d
 ORDER BY adrelid,
 	adnum;`, oid)
 
-	results := make([]QueryTableDefs, 0)
+	results := make([]QueryTableDef, 0)
 	err := connection.Select(&results, query)
 	utils.CheckError(err)
 	return results

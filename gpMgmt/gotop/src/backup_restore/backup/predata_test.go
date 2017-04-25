@@ -500,12 +500,12 @@ SET SUBPARTITION TEMPLATE
 		attsTwoDef := backup.QueryTableAtts{2, "j", false, true, false, "int", sql.NullString{String: "", Valid: false}}
 		attsThreeDef := backup.QueryTableAtts{3, "k", false, true, false, "int", sql.NullString{String: "", Valid: false}}
 
-		defsOne := backup.QueryTableDefs{1, "1"}
-		defsTwo := backup.QueryTableDefs{2, "2"}
-		defsThree := backup.QueryTableDefs{3, "3"}
+		defsOne := backup.QueryTableDef{1, "1"}
+		defsTwo := backup.QueryTableDef{2, "2"}
+		defsThree := backup.QueryTableDef{3, "3"}
 		It("has no DEFAULT columns", func() {
 			atts := []backup.QueryTableAtts{attsOne, attsTwo, attsThree}
-			defs := []backup.QueryTableDefs{}
+			defs := []backup.QueryTableDef{}
 			info := backup.ConsolidateColumnInfo(atts, defs)
 			Expect(info[0].DefVal).To(Equal(""))
 			Expect(info[1].DefVal).To(Equal(""))
@@ -513,7 +513,7 @@ SET SUBPARTITION TEMPLATE
 		})
 		It("has one DEFAULT column (i)", func() {
 			atts := []backup.QueryTableAtts{attsOneDef, attsTwo, attsThree}
-			defs := []backup.QueryTableDefs{defsOne}
+			defs := []backup.QueryTableDef{defsOne}
 			info := backup.ConsolidateColumnInfo(atts, defs)
 			Expect(info[0].DefVal).To(Equal("1"))
 			Expect(info[1].DefVal).To(Equal(""))
@@ -521,7 +521,7 @@ SET SUBPARTITION TEMPLATE
 		})
 		It("has one DEFAULT column (j)", func() {
 			atts := []backup.QueryTableAtts{attsOne, attsTwoDef, attsThree}
-			defs := []backup.QueryTableDefs{defsTwo}
+			defs := []backup.QueryTableDef{defsTwo}
 			info := backup.ConsolidateColumnInfo(atts, defs)
 			Expect(info[0].DefVal).To(Equal(""))
 			Expect(info[1].DefVal).To(Equal("2"))
@@ -529,7 +529,7 @@ SET SUBPARTITION TEMPLATE
 		})
 		It("has one DEFAULT column (k)", func() {
 			atts := []backup.QueryTableAtts{attsOne, attsTwo, attsThreeDef}
-			defs := []backup.QueryTableDefs{defsThree}
+			defs := []backup.QueryTableDef{defsThree}
 			info := backup.ConsolidateColumnInfo(atts, defs)
 			Expect(info[0].DefVal).To(Equal(""))
 			Expect(info[1].DefVal).To(Equal(""))
@@ -537,7 +537,7 @@ SET SUBPARTITION TEMPLATE
 		})
 		It("has two DEFAULT columns (i and j)", func() {
 			atts := []backup.QueryTableAtts{attsOneDef, attsTwoDef, attsThree}
-			defs := []backup.QueryTableDefs{defsOne, defsTwo}
+			defs := []backup.QueryTableDef{defsOne, defsTwo}
 			info := backup.ConsolidateColumnInfo(atts, defs)
 			Expect(info[0].DefVal).To(Equal("1"))
 			Expect(info[1].DefVal).To(Equal("2"))
@@ -545,7 +545,7 @@ SET SUBPARTITION TEMPLATE
 		})
 		It("has two DEFAULT columns (j and k)", func() {
 			atts := []backup.QueryTableAtts{attsOne, attsTwoDef, attsThreeDef}
-			defs := []backup.QueryTableDefs{defsTwo, defsThree}
+			defs := []backup.QueryTableDef{defsTwo, defsThree}
 			info := backup.ConsolidateColumnInfo(atts, defs)
 			Expect(info[0].DefVal).To(Equal(""))
 			Expect(info[1].DefVal).To(Equal("2"))
@@ -553,7 +553,7 @@ SET SUBPARTITION TEMPLATE
 		})
 		It("has two DEFAULT columns (i and k)", func() {
 			atts := []backup.QueryTableAtts{attsOneDef, attsTwo, attsThreeDef}
-			defs := []backup.QueryTableDefs{defsOne, defsThree}
+			defs := []backup.QueryTableDef{defsOne, defsThree}
 			info := backup.ConsolidateColumnInfo(atts, defs)
 			Expect(info[0].DefVal).To(Equal("1"))
 			Expect(info[1].DefVal).To(Equal(""))
@@ -561,7 +561,7 @@ SET SUBPARTITION TEMPLATE
 		})
 		It("has all DEFAULT columns", func() {
 			atts := []backup.QueryTableAtts{attsOneDef, attsTwoDef, attsThreeDef}
-			defs := []backup.QueryTableDefs{defsOne, defsTwo, defsThree}
+			defs := []backup.QueryTableDef{defsOne, defsTwo, defsThree}
 			info := backup.ConsolidateColumnInfo(atts, defs)
 			Expect(info[0].DefVal).To(Equal("1"))
 			Expect(info[1].DefVal).To(Equal("2"))
