@@ -17,13 +17,11 @@ depend :
 		go get golang.org/x/tools/cmd/goimports
 		go get gopkg.in/DATA-DOG/go-sqlmock.v1
 
-		go get
-
 format :
 		goimports -w .
 		go fmt .
 
-ginkgo :
+ginkgo : depend
 		ginkgo -r -randomizeSuites -randomizeAllSpecs 2>&1
 
 test : ginkgo
