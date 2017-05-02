@@ -571,18 +571,83 @@ SET SUBPARTITION TEMPLATE
 	Describe("PrintCreateSequenceStatements", func() {
 		buffer := gbytes.NewBuffer()
 		seqDefault := backup.QuerySequence{"seq_name", 7, 1, 9223372036854775807, 1, 5, 42, false, true}
-/*		seqNegIncr:= backup.QuerySequence{"seq_name", 7, -1, -1, -9223372036854775807, 5, 42, false, true}
+		seqNegIncr:= backup.QuerySequence{"seq_name", 7, -1, -1, -9223372036854775807, 5, 42, false, true}
 		seqMaxPos := backup.QuerySequence{"seq_name", 7, 1, 100, 1, 5, 42, false, true}
 		seqMinPos := backup.QuerySequence{"seq_name", 7, 1, 9223372036854775807, 10, 5, 42, false, true}
-		seqMaxNeg := backup.QuerySequence{"seq_name", 7, -1, -10, -9223372036854775807,, 5, 42, false, true}
+		seqMaxNeg := backup.QuerySequence{"seq_name", 7, -1, -10, -9223372036854775807, 5, 42, false, true}
 		seqMinNeg := backup.QuerySequence{"seq_name", 7, -1, -1, -100, 5, 42, false, true}
 		seqCycle := backup.QuerySequence{"seq_name", 7, 1, 9223372036854775807, 1, 5, 42, true, true}
 		seqStart := backup.QuerySequence{"seq_name", 7, 1, 9223372036854775807, 1, 5, 42, false, false}
-*/
+
 		It("can print a sequence with all default options", func() {
 			sequences := []backup.QuerySequence{seqDefault}
 			backup.PrintCreateSequenceStatements(buffer, sequences)
 			testutils.ExpectRegexp(buffer, `CREATE SEQUENCE seq_name
+	INCREMENT BY 1
+	NO MAXVALUE
+	NO MINVALUE
+	CACHE 5;`)
+		})
+		It("can print a decreasing sequence", func() {
+			sequences := []backup.QuerySequence{seqNegIncr}
+			backup.PrintCreateSequenceStatements(buffer, sequences)
+			testutils.ExpectRegexp(buffer, `CREATE SEQUENCE seq_name
+	INCREMENT BY -1
+	NO MAXVALUE
+	NO MINVALUE
+	CACHE 5;`)
+		})
+		It("can print an increasing sequence with a maximum value", func() {
+			sequences := []backup.QuerySequence{seqMaxPos}
+			backup.PrintCreateSequenceStatements(buffer, sequences)
+			testutils.ExpectRegexp(buffer, `CREATE SEQUENCE seq_name
+	INCREMENT BY 1
+	MAXVALUE 100
+	NO MINVALUE
+	CACHE 5;`)
+		})
+		It("can print an increasing sequence with a minimum value", func() {
+			sequences := []backup.QuerySequence{seqMinPos}
+			backup.PrintCreateSequenceStatements(buffer, sequences)
+			testutils.ExpectRegexp(buffer, `CREATE SEQUENCE seq_name
+	INCREMENT BY 1
+	NO MAXVALUE
+	MINVALUE 10
+	CACHE 5;`)
+		})
+		It("can print a decreasing sequence with a maximum value", func() {
+			sequences := []backup.QuerySequence{seqMaxNeg}
+			backup.PrintCreateSequenceStatements(buffer, sequences)
+			testutils.ExpectRegexp(buffer, `CREATE SEQUENCE seq_name
+	INCREMENT BY -1
+	MAXVALUE -10
+	NO MINVALUE
+	CACHE 5;`)
+		})
+		It("can print a decreasing sequence with a minimum value", func() {
+			sequences := []backup.QuerySequence{seqMinNeg}
+			backup.PrintCreateSequenceStatements(buffer, sequences)
+			testutils.ExpectRegexp(buffer, `CREATE SEQUENCE seq_name
+	INCREMENT BY -1
+	NO MAXVALUE
+	MINVALUE -100
+	CACHE 5;`)
+		})
+		It("can print a sequence that cycles", func() {
+			sequences := []backup.QuerySequence{seqCycle}
+			backup.PrintCreateSequenceStatements(buffer, sequences)
+			testutils.ExpectRegexp(buffer, `CREATE SEQUENCE seq_name
+	INCREMENT BY 1
+	NO MAXVALUE
+	NO MINVALUE
+	CACHE 5
+	CYCLE;`)
+		})
+		It("can print a sequence with a start value", func() {
+			sequences := []backup.QuerySequence{seqStart}
+			backup.PrintCreateSequenceStatements(buffer, sequences)
+			testutils.ExpectRegexp(buffer, `CREATE SEQUENCE seq_name
+	START WITH 7
 	INCREMENT BY 1
 	NO MAXVALUE
 	NO MINVALUE
