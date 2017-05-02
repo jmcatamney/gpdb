@@ -17,8 +17,9 @@ var (
 
 	quotedOrUnquotedString = regexp.MustCompile(`^(?:\"(.*)\"|(.*))\.(?:\"(.*)\"|(.*))$`)
 
-	replacerTo   = strings.NewReplacer("\"", "\"\"", "", "\\n", "	", "\\t")
-	replacerFrom = strings.NewReplacer("\"\"", "\"", "\\n", "", "\\t", "	")
+	// Swap between double quotes and paired double quotes, and between literal whitespace characters and escape sequences
+	replacerTo   = strings.NewReplacer("\"", "\"\"", "", "\\n", "\n", "\\n", "	", "\\t", "\t", "\\t")
+	replacerFrom = strings.NewReplacer("\"\"", "\"", "\\n", "\n", "\\t", "\t")
 )
 
 // This will mostly be used for schemas, but can be used for any database object with an oid.
@@ -58,7 +59,7 @@ func (t Table) ToString() string {
 	return fmt.Sprintf("%s.%s", schema, table)
 }
 
-func DbObjectFromString(name string) DBObject {
+func DBObjectFromString(name string) DBObject {
 	var object string
 	var matches []string
 	if matches = quotedIdentifier.FindStringSubmatch(name); len(matches) != 0 {
@@ -153,9 +154,7 @@ func GetUniqueSchemas(tables []Table) []DBObject {
 	}
 	schemas := make([]DBObject, 0)
 	for schema := range schemaMap {
-		if schema.ObjName != "public" {
-			schemas = append(schemas, schema)
-		}
+		schemas = append(schemas, schema)
 	}
 	SortDBObjects(schemas)
 	return schemas

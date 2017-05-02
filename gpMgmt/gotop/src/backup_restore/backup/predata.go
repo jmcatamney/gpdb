@@ -148,10 +148,11 @@ func PrintConstraintStatements(predataFile io.Writer, cons []string, fkCons []st
 	}
 }
 
-func PrintCreateSchemaStatements(predataFile io.Writer, tables []utils.Table) {
-	schemas := utils.GetUniqueSchemas(tables)
+func PrintCreateSchemaStatements(predataFile io.Writer, schemas []utils.DBObject) {
 	for _, schema := range schemas {
-		fmt.Fprintf(predataFile, "\n\nCREATE SCHEMA %s;", schema.ToString())
+		if schema.ObjName != "public" {
+			fmt.Fprintf(predataFile, "\n\nCREATE SCHEMA %s;", schema.ToString())
+		}
 	}
 }
 

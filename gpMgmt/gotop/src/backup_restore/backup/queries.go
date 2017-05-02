@@ -7,6 +7,22 @@ import (
 	"strings"
 )
 
+func GetAllUserSchemas(connection *utils.DBConn) []utils.DBObject{
+	query := `
+SELECT
+	oid AS objoid,
+	nspname AS objname
+FROM pg_namespace
+WHERE nspname NOT LIKE 'pg_temp_%'
+AND nspname NOT LIKE 'pg_toast_%'
+AND nspname NOT IN ('gp_toolkit', 'information_schema', 'pg_aoseg', 'pg_bitmapindex', 'pg_catalog');`
+	results := make([]utils.DBObject, 0)
+
+	err := connection.Select(&results, query)
+	utils.CheckError(err)
+	return results
+}
+
 func GetAllUserTables(connection *utils.DBConn) []utils.Table {
 	query := `
 SELECT

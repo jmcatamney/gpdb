@@ -64,7 +64,8 @@ func backupPredata(filename string, tables []utils.Table) {
 	PrintCreateDatabaseStatement(predataFile)
 
 	logger.Verbose("Writing CREATE SCHEMA statements to predata file")
-	PrintCreateSchemaStatements(predataFile, tables)
+	schemas := GetAllUserSchemas(connection)
+	PrintCreateSchemaStatements(predataFile, schemas)
 
 	logger.Verbose("Writing CREATE TABLE statements to predata file")
 	for _, table := range tables {

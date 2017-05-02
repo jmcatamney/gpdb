@@ -568,4 +568,25 @@ SET SUBPARTITION TEMPLATE
 			Expect(info[2].DefVal).To(Equal("3"))
 		})
 	})
+	Describe("PrintCreateSequenceStatements", func() {
+		buffer := gbytes.NewBuffer()
+		seqDefault := backup.QuerySequence{"seq_name", 7, 1, 9223372036854775807, 1, 5, 42, false, true}
+/*		seqNegIncr:= backup.QuerySequence{"seq_name", 7, -1, -1, -9223372036854775807, 5, 42, false, true}
+		seqMaxPos := backup.QuerySequence{"seq_name", 7, 1, 100, 1, 5, 42, false, true}
+		seqMinPos := backup.QuerySequence{"seq_name", 7, 1, 9223372036854775807, 10, 5, 42, false, true}
+		seqMaxNeg := backup.QuerySequence{"seq_name", 7, -1, -10, -9223372036854775807,, 5, 42, false, true}
+		seqMinNeg := backup.QuerySequence{"seq_name", 7, -1, -1, -100, 5, 42, false, true}
+		seqCycle := backup.QuerySequence{"seq_name", 7, 1, 9223372036854775807, 1, 5, 42, true, true}
+		seqStart := backup.QuerySequence{"seq_name", 7, 1, 9223372036854775807, 1, 5, 42, false, false}
+*/
+		It("can print a sequence with all default options", func() {
+			sequences := []backup.QuerySequence{seqDefault}
+			backup.PrintCreateSequenceStatements(buffer, sequences)
+			testutils.ExpectRegexp(buffer, `CREATE SEQUENCE seq_name
+	INCREMENT BY 1
+	NO MAXVALUE
+	NO MINVALUE
+	CACHE 5;`)
+		})
+	})
 })

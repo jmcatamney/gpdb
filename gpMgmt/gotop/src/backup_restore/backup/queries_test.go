@@ -370,9 +370,9 @@ SET SUBPARTITION TEMPLATE
 			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeResult)
 			results := backup.GetAllSequences(connection)
 			Expect(len(results)).To(Equal(2))
-			Expect(results[0].ObjOid).To(Equal(1))
+			Expect(results[0].ObjOid).To(Equal(uint32(1)))
 			Expect(results[0].ObjName).To(Equal("seq_one"))
-			Expect(results[1].ObjOid).To(Equal(2))
+			Expect(results[1].ObjOid).To(Equal(uint32(2)))
 			Expect(results[1].ObjName).To(Equal("seq_two"))
 		})
 	})
@@ -380,12 +380,12 @@ SET SUBPARTITION TEMPLATE
 		headerSeq := []string{"objoid", "objname"}
 		seqOne := []driver.Value{1, "seq_one"}
 		seqTwo := []driver.Value{2, "seq_two"}
-		headerSeqDef := []string{"sequence_name", "last_value", " increment_by", " max_value", " min_value", " cache_value", " log_cnt", " is_cycled", " is_called"}
+		headerSeqDef := []string{"sequence_name", "last_value", "increment_by", "max_value", "min_value", "cache_value", "log_cnt", "is_cycled", "is_called"}
 		seqDefOne := []driver.Value{"seq_one", 3, 1, 1000, 1, 2, 41, "f", "f"}
 		seqDefTwo := []driver.Value{"seq_two", 7, 1, 9223372036854775807, 1, 5, 42, "f", "f"}
 
 		It("returns a slice of definitions for all sequences", func() {
-			fakeSequences := sqlmock.NewRows(headerSeq).AddRow(seqOne...)
+			fakeSequences := sqlmock.NewRows(headerSeq).AddRow(seqOne...).AddRow(seqTwo...)
 			fakeResultOne := sqlmock.NewRows(headerSeqDef).AddRow(seqDefOne...)
 			fakeResultTwo := sqlmock.NewRows(headerSeqDef).AddRow(seqDefTwo...)
 			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeSequences)
@@ -394,13 +394,11 @@ SET SUBPARTITION TEMPLATE
 			results := backup.GetAllSequenceDefinitions(connection)
 			Expect(len(results)).To(Equal(2))
 			Expect(results[0].Name).To(Equal("seq_one"))
-			Expect(results[0].LastVal).To(Equal(3))
-			Expect(results[0].Increment).To(Equal(1))
+			Expect(results[0].LastVal).To(Equal(int64(3)))
+			Expect(results[0].Increment).To(Equal(int64(1)))
 			Expect(results[1].Name).To(Equal("seq_two"))
-			Expect(results[1].LastVal).To(Equal(7))
-			Expect(results[1].Increment).To(Equal(1))
+			Expect(results[1].LastVal).To(Equal(int64(7)))
+			Expect(results[1].Increment).To(Equal(int64(1)))
 		})
-	})
-	Describe("PrintCreateSequenceStatements", func() {
 	})
 })
