@@ -586,7 +586,9 @@ SET SUBPARTITION TEMPLATE
 	INCREMENT BY 1
 	NO MAXVALUE
 	NO MINVALUE
-	CACHE 5;`)
+	CACHE 5;
+
+SELECT pg_catalog.setval('seq_name', 7, true);`)
 		})
 		It("can print a decreasing sequence", func() {
 			sequences := []backup.QuerySequence{seqNegIncr}
@@ -595,7 +597,9 @@ SET SUBPARTITION TEMPLATE
 	INCREMENT BY -1
 	NO MAXVALUE
 	NO MINVALUE
-	CACHE 5;`)
+	CACHE 5;
+
+SELECT pg_catalog.setval('seq_name', 7, true);`)
 		})
 		It("can print an increasing sequence with a maximum value", func() {
 			sequences := []backup.QuerySequence{seqMaxPos}
@@ -604,7 +608,9 @@ SET SUBPARTITION TEMPLATE
 	INCREMENT BY 1
 	MAXVALUE 100
 	NO MINVALUE
-	CACHE 5;`)
+	CACHE 5;
+
+SELECT pg_catalog.setval('seq_name', 7, true);`)
 		})
 		It("can print an increasing sequence with a minimum value", func() {
 			sequences := []backup.QuerySequence{seqMinPos}
@@ -613,7 +619,9 @@ SET SUBPARTITION TEMPLATE
 	INCREMENT BY 1
 	NO MAXVALUE
 	MINVALUE 10
-	CACHE 5;`)
+	CACHE 5;
+
+SELECT pg_catalog.setval('seq_name', 7, true);`)
 		})
 		It("can print a decreasing sequence with a maximum value", func() {
 			sequences := []backup.QuerySequence{seqMaxNeg}
@@ -622,7 +630,9 @@ SET SUBPARTITION TEMPLATE
 	INCREMENT BY -1
 	MAXVALUE -10
 	NO MINVALUE
-	CACHE 5;`)
+	CACHE 5;
+
+SELECT pg_catalog.setval('seq_name', 7, true);`)
 		})
 		It("can print a decreasing sequence with a minimum value", func() {
 			sequences := []backup.QuerySequence{seqMinNeg}
@@ -631,7 +641,9 @@ SET SUBPARTITION TEMPLATE
 	INCREMENT BY -1
 	NO MAXVALUE
 	MINVALUE -100
-	CACHE 5;`)
+	CACHE 5;
+
+SELECT pg_catalog.setval('seq_name', 7, true);`)
 		})
 		It("can print a sequence that cycles", func() {
 			sequences := []backup.QuerySequence{seqCycle}
@@ -641,7 +653,9 @@ SET SUBPARTITION TEMPLATE
 	NO MAXVALUE
 	NO MINVALUE
 	CACHE 5
-	CYCLE;`)
+	CYCLE;
+
+SELECT pg_catalog.setval('seq_name', 7, true);`)
 		})
 		It("can print a sequence with a start value", func() {
 			sequences := []backup.QuerySequence{seqStart}
@@ -651,7 +665,9 @@ SET SUBPARTITION TEMPLATE
 	INCREMENT BY 1
 	NO MAXVALUE
 	NO MINVALUE
-	CACHE 5;`)
+	CACHE 5;
+
+SELECT pg_catalog.setval('seq_name', 7, false);`)
 		})
 	})
 })

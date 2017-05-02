@@ -190,6 +190,8 @@ func PrintCreateSequenceStatements(predataFile io.Writer, sequences []QuerySeque
 		if sequence.IsCycled {
 			cycleStr = "\n\tCYCLE"
 		}
-		fmt.Fprintf(predataFile, "\tCACHE %d%s;\n", sequence.CacheVal, cycleStr)
+		fmt.Fprintf(predataFile, "\tCACHE %d%s;", sequence.CacheVal, cycleStr)
+
+		fmt.Fprintf(predataFile, "\n\nSELECT pg_catalog.setval('%s', %d, %v);\n", sequence.Name, sequence.LastVal, sequence.IsCalled)
 	}
 }
