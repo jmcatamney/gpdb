@@ -207,3 +207,31 @@ WHERE oid = %d AND reloptions IS NOT NULL;`, oid)
 	}
 	return ""
 }
+
+func GetAllSequences(connection *utils.DBConn) []utils.DBObject {
+	query := fmt.Sprintf("SELECT oid AS objoid, relname AS objname FROM pg_class WHERE relkind = 'S'")
+	results := make([]utils.DBObject, 0)
+	err := connection.Select(&results, query)
+	utils.CheckError(err)
+	return results
+}
+
+type QuerySequence struct {
+	Name string `db:"sequence_name"`
+	LastVal int64 `db:"last_value"`
+	Increment int64 `db:"increment_by"`
+	MaxVal int64 `db:"max_value"`
+	MinVal int64 `db:"min_value"`
+	CacheVal int64 `db:"cache_value"`
+	LogCnt int64 `db:"log_cnt"`
+	IsCycled bool `db:"is_cycled"`
+	IsCalled bool `db:"is_called"`
+}
+
+func GetSequence(connection *utils.DBConn, seqName string) QuerySequence {
+	query := fmt.Sprintf("SELECT * FROM %s", seqName)
+	result := QuerySequence{}
+	err := connection.Get(&result, query)
+	utils.CheckError(err)
+	return result
+}

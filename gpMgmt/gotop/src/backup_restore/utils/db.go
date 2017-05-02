@@ -74,8 +74,15 @@ func (dbconn *DBConn) Commit() {
 	dbconn.Tx = nil
 }
 
+func escapeDBName(dbname string) string {
+	dbname = strings.Replace(dbname, `\`, `\\`, -1)
+	dbname = strings.Replace(dbname, `'`, `\'`, -1)
+	return dbname
+}
+
 func (dbconn *DBConn) Connect() {
-	connStr := fmt.Sprintf("user=%s dbname=%s host=%s port=%d sslmode=disable", dbconn.User, dbconn.DBName, dbconn.Host, dbconn.Port)
+	dbname := escapeDBName(dbconn.DBName)
+	connStr := fmt.Sprintf(`user=%s dbname='%s' host=%s port=%d sslmode=disable`, dbconn.User, dbname, dbconn.Host, dbconn.Port)
 	var err error
 	dbconn.Conn, err = dbconn.Driver.Connect("postgres", connStr)
 	if err != nil {
@@ -107,7 +114,7 @@ func (dbconn *DBConn) Get(dest interface{}, query string) error {
 
 func (dbconn *DBConn) GetDBSize() string {
 	size := struct{ DBSize string }{}
-	sizeQuery := fmt.Sprintf("SELECT pg_size_pretty(sodddatsize) as dbsize FROM gp_toolkit.gp_size_of_database WHERE sodddatname='%s'", dbconn.DBName)
+	sizeQuery := fmt.Sprintf("SELECT pg_size_pretty(sodddatsize) as dbsize FROM gp_toolkit.gp_size_of_database WHERE sodddatname=E'%s'", escapeDBName(dbconn.DBName))
 	err := dbconn.Get(&size, sizeQuery)
 	CheckError(err)
 	return size.DBSize

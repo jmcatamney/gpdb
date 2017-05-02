@@ -98,6 +98,10 @@ func ProcessConstraints(table utils.Table, constraints []QueryConstraint) ([]str
 	return cons, fkCons
 }
 
+func PrintCreateDatabaseStatement(predataFile io.Writer) {
+	fmt.Fprintf(predataFile, "\n\nCREATE DATABASE %s;", utils.QuoteIdent(connection.DBName))
+}
+
 func PrintCreateTableStatement(predataFile io.Writer, table utils.Table, columnDefs []ColumnDefinition, tableDef TableDefinition) {
 	fmt.Fprintf(predataFile, "\n\nCREATE TABLE %s (\n", table.ToString())
 	lines := make([]string, 0)
@@ -148,5 +152,43 @@ func PrintCreateSchemaStatements(predataFile io.Writer, tables []utils.Table) {
 	schemas := utils.GetUniqueSchemas(tables)
 	for _, schema := range schemas {
 		fmt.Fprintf(predataFile, "\n\nCREATE SCHEMA %s;", schema.ToString())
+	}
+}
+
+func GetAllSequenceDefinitions(connection *utils.DBConn) []QuerySequence {
+	allSequences := GetAllSequences(connection)
+	seqDefs := make([]QuerySequence, 0)
+	for _, sequence := range allSequences {
+		seqDef := GetSequence(connection, sequence.ObjName)
+		seqDefs = append(seqDefs, seqDef)
+	}
+	return seqDefs
+}
+
+func PrintCreateSequenceStatements(predataFile io.Writer, sequences []QuerySequence) {
+	maxVal := int64(9223372036854775807)
+	minVal := int64(-9223372036854775807)
+	for _, sequence := range sequences {
+		fmt.Fprintln(predataFile, "\n\nCREATE SEQUENCE", sequence.Name)
+		if !sequence.IsCalled {
+			fmt.Fprintln(predataFile, "\tSTART WITH", sequence.LastVal)
+		}
+		fmt.Fprintln(predataFile, "\tINCREMENT BY", sequence.Increment)
+
+		if !((sequence.MaxVal == maxVal && sequence.Increment > 0) || (sequence.MaxVal == -1 && sequence.Increment < 0)) {
+			fmt.Fprintln(predataFile, "\tMAXVALUE", sequence.MaxVal)
+		} else {
+			fmt.Fprintln(predataFile, "\tNO MAXVALUE")
+		}
+		if !((sequence.MinVal == minVal && sequence.Increment < 0) || (sequence.MinVal == 1 && sequence.Increment > 0)) {
+			fmt.Fprintln(predataFile, "\tMINVALUE", sequence.MinVal)
+		} else {
+			fmt.Fprintln(predataFile, "\tNO MINVALUE")
+		}
+		cycleStr := ""
+		if sequence.IsCycled {
+			cycleStr = "\n\tCYCLE"
+		}
+		fmt.Fprintf(predataFile, "\tCACHE %d%s;\n", sequence.CacheVal, cycleStr)
 	}
 }

@@ -17,13 +17,14 @@ var (
 
 	quotedOrUnquotedString = regexp.MustCompile(`^(?:\"(.*)\"|(.*))\.(?:\"(.*)\"|(.*))$`)
 
-	replacerTo   = strings.NewReplacer("\"", "\"\"", "\n", "\\n", "\t", "\\t")
-	replacerFrom = strings.NewReplacer("\"\"", "\"", "\\n", "\n", "\\t", "\t")
+	replacerTo   = strings.NewReplacer("\"", "\"\"", "", "\\n", "	", "\\t")
+	replacerFrom = strings.NewReplacer("\"\"", "\"", "\\n", "", "\\t", "	")
 )
 
-type Schema struct {
-	SchemaOid  uint32
-	SchemaName string
+// This will mostly be used for schemas, but can be used for any database object with an oid.
+type DBObject struct {
+	ObjOid  uint32
+	ObjName string
 }
 
 type Table struct {
@@ -46,8 +47,8 @@ func QuoteIdent(ident string) string {
 	return ident
 }
 
-func (s Schema) ToString() string {
-	return QuoteIdent(s.SchemaName)
+func (s DBObject) ToString() string {
+	return QuoteIdent(s.ObjName)
 }
 
 // Print a table in schema.table format, with everything escaped appropriately.
@@ -57,17 +58,17 @@ func (t Table) ToString() string {
 	return fmt.Sprintf("%s.%s", schema, table)
 }
 
-func SchemaFromString(name string) Schema {
-	var schema string
+func DbObjectFromString(name string) DBObject {
+	var object string
 	var matches []string
 	if matches = quotedIdentifier.FindStringSubmatch(name); len(matches) != 0 {
-		schema = replacerFrom.Replace(matches[1])
+		object = replacerFrom.Replace(matches[1])
 	} else if matches = unquotedIdentifier.FindStringSubmatch(name); len(matches) != 0 {
-		schema = replacerFrom.Replace(matches[1])
+		object = replacerFrom.Replace(matches[1])
 	} else {
 		logger.Fatal("\"%s\" is not a valid identifier", name)
 	}
-	return Schema{0, schema}
+	return DBObject{0, object}
 }
 
 /* Parse an appropriately-escaped schema.table string into a Table.  The Table's
@@ -98,22 +99,22 @@ func TableFromString(name string) Table {
  * Functions for sorting schemas and tables
  */
 
-type Schemas []Schema
+type DBObjects []DBObject
 
-func (slice Schemas) Len() int {
+func (slice DBObjects) Len() int {
 	return len(slice)
 }
 
-func (slice Schemas) Less(i int, j int) bool {
-	return slice[i].SchemaName < slice[j].SchemaName
+func (slice DBObjects) Less(i int, j int) bool {
+	return slice[i].ObjName < slice[j].ObjName
 }
 
-func (slice Schemas) Swap(i int, j int) {
+func (slice DBObjects) Swap(i int, j int) {
 	slice[i], slice[j] = slice[j], slice[i]
 }
 
-func SortSchemas(schemas Schemas) {
-	sort.Sort(schemas)
+func SortDBObjects(objects DBObjects) {
+	sort.Sort(objects)
 }
 
 type Tables []Table
@@ -136,8 +137,8 @@ func (slice Tables) Swap(i int, j int) {
 	slice[i], slice[j] = slice[j], slice[i]
 }
 
-func SortTables(schemas Tables) {
-	sort.Sort(schemas)
+func SortTables(tables Tables) {
+	sort.Sort(tables)
 }
 
 /*
@@ -145,17 +146,17 @@ func SortTables(schemas Tables) {
  */
 
 // Given a list of Tables, returns a sorted list of their Schemas.
-func GetUniqueSchemas(tables []Table) []Schema {
-	schemaMap := make(map[Schema]bool, 0)
+func GetUniqueSchemas(tables []Table) []DBObject {
+	schemaMap := make(map[DBObject]bool, 0)
 	for _, table := range tables {
-		schemaMap[Schema{table.SchemaOid, table.SchemaName}] = true
+		schemaMap[DBObject{table.SchemaOid, table.SchemaName}] = true
 	}
-	schemas := make([]Schema, 0)
+	schemas := make([]DBObject, 0)
 	for schema := range schemaMap {
-		if schema.SchemaName != "public" {
+		if schema.ObjName != "public" {
 			schemas = append(schemas, schema)
 		}
 	}
-	SortSchemas(schemas)
+	SortDBObjects(schemas)
 	return schemas
 }
