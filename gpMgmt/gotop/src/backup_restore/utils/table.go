@@ -18,7 +18,8 @@ var (
 	quotedOrUnquotedString = regexp.MustCompile(`^(?:\"(.*)\"|(.*))\.(?:\"(.*)\"|(.*))$`)
 
 	// Swap between double quotes and paired double quotes, and between literal whitespace characters and escape sequences
-	replacerTo   = strings.NewReplacer("\"", "\"\"", "", "\\n", "\n", "\\n", "	", "\\t", "\t", "\\t")
+	replacerTo   = strings.NewReplacer("\"", "\"\"", `
+`, "\\n", "\n", "\\n", "	", "\\t", "\t", "\\t")
 	replacerFrom = strings.NewReplacer("\"\"", "\"", "\\n", "\n", "\\t", "\t")
 )
 
@@ -26,6 +27,7 @@ var (
 type DBObject struct {
 	ObjOid  uint32
 	ObjName string
+	ObjComment string
 }
 
 type Table struct {
@@ -69,7 +71,7 @@ func DBObjectFromString(name string) DBObject {
 	} else {
 		logger.Fatal("\"%s\" is not a valid identifier", name)
 	}
-	return DBObject{0, object}
+	return DBObject{0, object, ""}
 }
 
 /* Parse an appropriately-escaped schema.table string into a Table.  The Table's
@@ -147,15 +149,19 @@ func SortTables(tables Tables) {
  */
 
 // Given a list of Tables, returns a sorted list of their Schemas.
-func GetUniqueSchemas(tables []Table) []DBObject {
-	schemaMap := make(map[DBObject]bool, 0)
+// Assumes that the Table list is sorted by schema and then by table.
+func GetUniqueSchemas(schemas []DBObject, tables []Table) []DBObject {
+	currentSchemaOid := uint32(0)
+	uniqueSchemas := make([]DBObject, 0)
+	schemaMap := make(map[uint32]DBObject, 0)
+	for _, schema := range schemas {
+		schemaMap[schema.ObjOid] = schema
+	}
 	for _, table := range tables {
-		schemaMap[DBObject{table.SchemaOid, table.SchemaName}] = true
+		if table.SchemaOid != currentSchemaOid {
+			currentSchemaOid = table.SchemaOid
+			uniqueSchemas = append(uniqueSchemas, schemaMap[currentSchemaOid])
+		}
 	}
-	schemas := make([]DBObject, 0)
-	for schema := range schemaMap {
-		schemas = append(schemas, schema)
-	}
-	SortDBObjects(schemas)
-	return schemas
+	return uniqueSchemas
 }

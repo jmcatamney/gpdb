@@ -11,11 +11,13 @@ func GetAllUserSchemas(connection *utils.DBConn) []utils.DBObject{
 	query := `
 SELECT
 	oid AS objoid,
-	nspname AS objname
+	nspname AS objname,
+	obj_description(oid, 'pg_namespace') AS objcomment
 FROM pg_namespace
 WHERE nspname NOT LIKE 'pg_temp_%'
 AND nspname NOT LIKE 'pg_toast_%'
-AND nspname NOT IN ('gp_toolkit', 'information_schema', 'pg_aoseg', 'pg_bitmapindex', 'pg_catalog');`
+AND nspname NOT IN ('gp_toolkit', 'information_schema', 'pg_aoseg', 'pg_bitmapindex', 'pg_catalog')
+ORDER BY objname;`
 	results := make([]utils.DBObject, 0)
 
 	err := connection.Select(&results, query)

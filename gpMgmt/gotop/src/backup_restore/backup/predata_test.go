@@ -670,4 +670,19 @@ SELECT pg_catalog.setval('seq_name', 7, true);`)
 SELECT pg_catalog.setval('seq_name', 7, false);`)
 		})
 	})
+//	Describe("PrintCreateSchemaStatements", func() {
+//		buffer := gbytes.NewBuffer()
+//
+//		It("can print schema with comments", func() {
+//			schemaComment := backup.QueryComment{"Comment, not comet"}
+//
+//
+//			schema := utils.DBObject{0, "schemaname"}
+//
+//			backup.PrintCreateSequenceStatements(buffer, [schema])
+//			testutils.ExpectRegexp(buffer, `CREATE SCHEMA schema_with_comments;
+//COMMENT ON SCHEMA  schema_with_comments IS 'Comment, not comet' ; `)
+//		})
+//	})
+
 })

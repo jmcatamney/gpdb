@@ -71,12 +71,12 @@ var _ = Describe("utils/table tests", func() {
 	})
 	Describe("DBObject.ToString", func() {
 		It("remains unquoted if it contains no special characters", func() {
-			testSchema := utils.DBObject{0, `schemaname`}
+			testSchema := utils.DBObject{0, `schemaname`, ""}
 			expected := `schemaname`
 			Expect(testSchema.ToString()).To(Equal(expected))
 		})
 		It("is quoted if it contains special characters", func() {
-			testSchema := utils.DBObject{0, `schema,name`}
+			testSchema := utils.DBObject{0, `schema,name`, ""}
 			expected := `"schema,name"`
 			Expect(testSchema.ToString()).To(Equal(expected))
 		})
@@ -152,27 +152,28 @@ var _ = Describe("utils/table tests", func() {
 		})
 	})
 	Describe("GetUniqueSchemas", func() {
-		publicOne := utils.Table{0, 0, "public", "foo"}
-		publicTwo := utils.Table{0, 0, "public", "bar"}
-		schemaPublic := utils.DBObject{0, "public"}
-		otherOne := utils.Table{0, 0, "otherschema", "foo"}
-		otherTwo := utils.Table{0, 0, "otherschema", "bar"}
-		schemaOther := utils.DBObject{0, "otherschema"}
+		alphabeticalAFoo := utils.Table{1, 0, "otherschema", "foo"}
+		alphabeticalABar := utils.Table{1, 0, "otherschema", "bar"}
+		schemaOther := utils.DBObject{2, "otherschema", ""}
+		alphabeticalBFoo := utils.Table{2, 0, "public", "foo"}
+		alphabeticalBBar := utils.Table{2, 0, "public", "bar"}
+		schemaPublic := utils.DBObject{1, "public", "Standard public schema"}
+		schemas := []utils.DBObject{schemaOther, schemaPublic}
 
 		It("has multiple tables in a single schema", func() {
-			tables := []utils.Table{publicOne, publicTwo}
-			schemas := utils.GetUniqueSchemas(tables)
-			Expect(schemas).To(Equal([]utils.DBObject{schemaPublic}))
+			tables := []utils.Table{alphabeticalAFoo, alphabeticalABar}
+			uniqueSchemas := utils.GetUniqueSchemas(schemas, tables)
+			Expect(uniqueSchemas).To(Equal([]utils.DBObject{schemaPublic}))
 		})
 		It("has multiple schemas, each with multiple tables", func() {
-			tables := []utils.Table{publicOne, publicTwo, otherOne, otherTwo}
-			schemas := utils.GetUniqueSchemas(tables)
-			Expect(schemas).To(Equal([]utils.DBObject{schemaOther, schemaPublic}))
+			tables := []utils.Table{alphabeticalBFoo, alphabeticalBBar, alphabeticalAFoo, alphabeticalABar}
+			uniqueSchemas := utils.GetUniqueSchemas(schemas, tables)
+			Expect(uniqueSchemas).To(Equal([]utils.DBObject{schemaOther, schemaPublic}))
 		})
 		It("has no tables", func() {
 			tables := []utils.Table{}
-			schemas := utils.GetUniqueSchemas(tables)
-			Expect(schemas).To(Equal([]utils.DBObject{}))
+			uniqueSchemas := utils.GetUniqueSchemas(schemas, tables)
+			Expect(uniqueSchemas).To(Equal([]utils.DBObject{}))
 		})
 	})
 })
