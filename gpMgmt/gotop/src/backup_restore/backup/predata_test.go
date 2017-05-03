@@ -23,15 +23,15 @@ var _ = Describe("backup/predata tests", func() {
 		rowOne := backup.ColumnDefinition{1, "i", false, false, false, "int", sql.NullString{String: "", Valid: false}, ""}
 		rowTwo := backup.ColumnDefinition{2, "j", false, false, false, "character varying(20)", sql.NullString{String: "", Valid: false}, ""}
 		rowDropped := backup.ColumnDefinition{2, "j", false, false, true, "character varying(20)", sql.NullString{String: "", Valid: false}, ""}
-		rowOneEnc := backup.ColumnDefinition{1, "i", false, false, false, "int", sql.NullString{String: "compresstype=none,blocksize=32768,compresslevel=0", Valid: true}, ""}
-		rowTwoEnc := backup.ColumnDefinition{2, "j", false, false, false, "character varying(20)", sql.NullString{String: "compresstype=zlib,blocksize=65536,compresslevel=1", Valid: true}, ""}
+		rowOneEncoding := backup.ColumnDefinition{1, "i", false, false, false, "int", sql.NullString{String: "compresstype=none,blocksize=32768,compresslevel=0", Valid: true}, ""}
+		rowTwoEncoding := backup.ColumnDefinition{2, "j", false, false, false, "character varying(20)", sql.NullString{String: "compresstype=zlib,blocksize=65536,compresslevel=1", Valid: true}, ""}
 		rowNotNull := backup.ColumnDefinition{2, "j", true, false, false, "character varying(20)", sql.NullString{String: "", Valid: false}, ""}
-		rowEncNotNull := backup.ColumnDefinition{2, "j", true, false, false, "character varying(20)", sql.NullString{String: "compresstype=zlib,blocksize=65536,compresslevel=1", Valid: true}, ""}
+		rowEncodingNotNull := backup.ColumnDefinition{2, "j", true, false, false, "character varying(20)", sql.NullString{String: "compresstype=zlib,blocksize=65536,compresslevel=1", Valid: true}, ""}
 		rowOneDef := backup.ColumnDefinition{1, "i", false, true, false, "int", sql.NullString{String: "", Valid: false}, "42"}
 		rowTwoDef := backup.ColumnDefinition{2, "j", false, true, false, "character varying(20)", sql.NullString{String: "", Valid: false}, "'bar'::text"}
-		rowTwoEncDef := backup.ColumnDefinition{2, "j", false, true, false, "character varying(20)", sql.NullString{String: "compresstype=zlib,blocksize=65536,compresslevel=1", Valid: true}, "'bar'::text"}
+		rowTwoEncodingDef := backup.ColumnDefinition{2, "j", false, true, false, "character varying(20)", sql.NullString{String: "compresstype=zlib,blocksize=65536,compresslevel=1", Valid: true}, "'bar'::text"}
 		rowNotNullDef := backup.ColumnDefinition{2, "j", true, true, false, "character varying(20)", sql.NullString{String: "", Valid: false}, "'bar'::text"}
-		rowEncNotNullDef := backup.ColumnDefinition{2, "j", true, true, false, "character varying(20)", sql.NullString{String: "compresstype=zlib,blocksize=65536,compresslevel=1", Valid: true}, "'bar'::text"}
+		rowEncodingNotNullDef := backup.ColumnDefinition{2, "j", true, true, false, "character varying(20)", sql.NullString{String: "compresstype=zlib,blocksize=65536,compresslevel=1", Valid: true}, "'bar'::text"}
 
 		distRandom := "DISTRIBUTED RANDOMLY"
 		distSingle := "DISTRIBUTED BY (i)"
@@ -99,7 +99,7 @@ SET SUBPARTITION TEMPLATE
 		})
 		Context("One special table attribute", func() {
 			It("prints a CREATE TABLE block where one line has the given ENCODING and the other has the default ENCODING", func() {
-				col := []backup.ColumnDefinition{rowOneEnc, rowTwoEnc}
+				col := []backup.ColumnDefinition{rowOneEncoding, rowTwoEncoding}
 				table := backup.TableDefinition{distRandom, partDefEmpty, partTemplateDefEmpty, heapOpts}
 				backup.PrintCreateTableStatement(buffer, testTable, col, table)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE public.tablename (
@@ -137,7 +137,7 @@ SET SUBPARTITION TEMPLATE
 		})
 		Context("Multiple special table attributes on one column", func() {
 			It("prints a CREATE TABLE block where one line contains both NOT NULL and ENCODING", func() {
-				col := []backup.ColumnDefinition{rowOneEnc, rowEncNotNull}
+				col := []backup.ColumnDefinition{rowOneEncoding, rowEncodingNotNull}
 				table := backup.TableDefinition{distRandom, partDefEmpty, partTemplateDefEmpty, heapOpts}
 				backup.PrintCreateTableStatement(buffer, testTable, col, table)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE public.tablename (
@@ -155,7 +155,7 @@ SET SUBPARTITION TEMPLATE
 ) DISTRIBUTED RANDOMLY;`)
 			})
 			It("prints a CREATE TABLE block where one line contains both DEFAULT and ENCODING", func() {
-				col := []backup.ColumnDefinition{rowOneEnc, rowTwoEncDef}
+				col := []backup.ColumnDefinition{rowOneEncoding, rowTwoEncodingDef}
 				table := backup.TableDefinition{distRandom, partDefEmpty, partTemplateDefEmpty, heapOpts}
 				backup.PrintCreateTableStatement(buffer, testTable, col, table)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE public.tablename (
@@ -164,7 +164,7 @@ SET SUBPARTITION TEMPLATE
 ) DISTRIBUTED RANDOMLY;`)
 			})
 			It("prints a CREATE TABLE block where one line contains all three of DEFAULT, NOT NULL, and ENCODING", func() {
-				col := []backup.ColumnDefinition{rowOneEnc, rowEncNotNullDef}
+				col := []backup.ColumnDefinition{rowOneEncoding, rowEncodingNotNullDef}
 				table := backup.TableDefinition{distRandom, partDefEmpty, partTemplateDefEmpty, heapOpts}
 				backup.PrintCreateTableStatement(buffer, testTable, col, table)
 				testutils.ExpectRegexp(buffer, `CREATE TABLE public.tablename (

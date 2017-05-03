@@ -105,11 +105,11 @@ func (dbconn *DBConn) Exec(query string) (sql.Result, error) {
 	return dbconn.Conn.Exec(query)
 }
 
-func (dbconn *DBConn) Get(dest interface{}, query string) error {
+func (dbconn *DBConn) Get(destination interface{}, query string) error {
 	if dbconn.Tx != nil {
-		return dbconn.Tx.Get(dest, query)
+		return dbconn.Tx.Get(destination, query)
 	}
-	return dbconn.Conn.Get(dest, query)
+	return dbconn.Conn.Get(destination, query)
 }
 
 func (dbconn *DBConn) GetDBSize() string {
@@ -120,9 +120,9 @@ func (dbconn *DBConn) GetDBSize() string {
 	return size.DBSize
 }
 
-func (dbconn *DBConn) Select(dest interface{}, query string) error {
+func (dbconn *DBConn) Select(destination interface{}, query string) error {
 	if dbconn.Tx != nil {
-		return dbconn.Tx.Select(dest, query)
+		return dbconn.Tx.Select(destination, query)
 	}
-	return dbconn.Conn.Select(dest, query)
+	return dbconn.Conn.Select(destination, query)
 }
