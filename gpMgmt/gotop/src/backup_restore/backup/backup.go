@@ -60,6 +60,10 @@ func DoBackup() {
 func backupPredata(filename string, tables []utils.Table) {
 	predataFile := utils.MustOpenFile(filename)
 
+	logger.Verbose("Writing session GUCs to predata file")
+	gucs := GetSessionGUCs(connection)
+	PrintSessionGUCs(predataFile, gucs)
+
 	logger.Verbose("Writing CREATE DATABASE statement to predata file")
 	PrintCreateDatabaseStatement(predataFile)
 
@@ -84,6 +88,11 @@ func backupPredata(filename string, tables []utils.Table) {
 
 func backupPostdata(filename string, tables []utils.Table) {
 	postdataFile := utils.MustOpenFile(filename)
+
+	logger.Verbose("Writing session GUCs to predata file")
+	gucs := GetSessionGUCs(connection)
+	PrintSessionGUCs(postdataFile, gucs)
+
 	logger.Verbose("Writing CREATE INDEX statements to postdata file")
 	indexes := GetIndexesForAllTables(connection, tables)
 	PrintCreateIndexStatements(postdataFile, indexes)
