@@ -33,6 +33,12 @@ ci : ginkgo
 build : 
 		go build $(GOFLAGS) -o $(MODULE_NAME)
 
+build_rhel:
+		env GOOS=linux GOARCH=amd64 go build $(GOFLAGS) -o $(MODULE_NAME)
+
+build_osx:
+		env GOOS=darwin GOARCH=amd64 go build $(GOFLAGS) -o $(MODULE_NAME)
+
 clean :
 		rm $(MODULE_NAME)
 		rm -r /tmp/go-build*
