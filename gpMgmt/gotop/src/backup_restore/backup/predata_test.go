@@ -571,7 +571,7 @@ SET SUBPARTITION TEMPLATE
 	Describe("PrintCreateSequenceStatements", func() {
 		buffer := gbytes.NewBuffer()
 		seqDefault := backup.QuerySequence{"seq_name", 7, 1, 9223372036854775807, 1, 5, 42, false, true}
-		seqNegIncr:= backup.QuerySequence{"seq_name", 7, -1, -1, -9223372036854775807, 5, 42, false, true}
+		seqNegIncr := backup.QuerySequence{"seq_name", 7, -1, -1, -9223372036854775807, 5, 42, false, true}
 		seqMaxPos := backup.QuerySequence{"seq_name", 7, 1, 100, 1, 5, 42, false, true}
 		seqMinPos := backup.QuerySequence{"seq_name", 7, 1, 9223372036854775807, 10, 5, 42, false, true}
 		seqMaxNeg := backup.QuerySequence{"seq_name", 7, -1, -10, -9223372036854775807, 5, 42, false, true}
@@ -670,19 +670,16 @@ SELECT pg_catalog.setval('seq_name', 7, true);`)
 SELECT pg_catalog.setval('seq_name', 7, false);`)
 		})
 	})
-//	Describe("PrintCreateSchemaStatements", func() {
-//		buffer := gbytes.NewBuffer()
-//
-//		It("can print schema with comments", func() {
-//			schemaComment := backup.QueryComment{"Comment, not comet"}
-//
-//
-//			schema := utils.DBObject{0, "schemaname"}
-//
-//			backup.PrintCreateSequenceStatements(buffer, [schema])
-//			testutils.ExpectRegexp(buffer, `CREATE SCHEMA schema_with_comments;
-//COMMENT ON SCHEMA  schema_with_comments IS 'Comment, not comet' ; `)
-//		})
-//	})
+	//	Describe("PrintCreateSchemaStatements", func() {
+	//		buffer := gbytes.NewBuffer()
+	//
+	//		It("can print schema with comments", func() {
+	//			schemas := []utils.DBObject{utils.DBObject{0, "schema_with_comments", "Comment, not comet"}}
+	//
+	//			backup.PrintCreateSchemaStatements(buffer, schemas)
+	//			testutils.ExpectRegexp(buffer, `CREATE SCHEMA schema_with_comments;
+	//COMMENT ON SCHEMA  schema_with_comments IS 'Comment, not comet' ; `)
+	//		})
+	//	})
 
 })
