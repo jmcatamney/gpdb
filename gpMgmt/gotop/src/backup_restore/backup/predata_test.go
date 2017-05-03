@@ -670,16 +670,22 @@ SELECT pg_catalog.setval('seq_name', 7, true);`)
 SELECT pg_catalog.setval('seq_name', 7, false);`)
 		})
 	})
-	//	Describe("PrintCreateSchemaStatements", func() {
-	//		buffer := gbytes.NewBuffer()
-	//
-	//		It("can print schema with comments", func() {
-	//			schemas := []utils.DBObject{utils.DBObject{0, "schema_with_comments", "Comment, not comet"}}
-	//
-	//			backup.PrintCreateSchemaStatements(buffer, schemas)
-	//			testutils.ExpectRegexp(buffer, `CREATE SCHEMA schema_with_comments;
-	//COMMENT ON SCHEMA  schema_with_comments IS 'Comment, not comet' ; `)
-	//		})
-	//	})
+	Describe("PrintCreateSchemaStatements", func() {
+		buffer := gbytes.NewBuffer()
+
+		It("can print schema with comments", func() {
+			schemas := []utils.DBObject{utils.DBObject{0, "schema_with_comments", sql.NullString{"Comment, not comet", true}}}
+
+			backup.PrintCreateSchemaStatements(buffer, schemas)
+			testutils.ExpectRegexp(buffer, `CREATE SCHEMA schema_with_comments;
+COMMENT ON SCHEMA schema_with_comments IS 'Comment, not comet';`)
+		})
+		It("can print schema with no comments", func() {
+			schemas := []utils.DBObject{utils.DBObject{0, "schema_with_no_comments", sql.NullString{"", false}}}
+
+			backup.PrintCreateSchemaStatements(buffer, schemas)
+			testutils.ExpectRegexp(buffer, `CREATE SCHEMA schema_with_no_comments;`)
+		})
+	})
 
 })

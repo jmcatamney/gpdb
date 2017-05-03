@@ -2,6 +2,7 @@ package utils_test
 
 import (
 	"backup_restore/utils"
+	"database/sql"
 	"fmt"
 	"testing"
 
@@ -71,12 +72,12 @@ var _ = Describe("utils/table tests", func() {
 	})
 	Describe("DBObject.ToString", func() {
 		It("remains unquoted if it contains no special characters", func() {
-			testSchema := utils.DBObject{0, `schemaname`, ""}
+			testSchema := utils.DBObject{0, `schemaname`, sql.NullString{"", false}}
 			expected := `schemaname`
 			Expect(testSchema.ToString()).To(Equal(expected))
 		})
 		It("is quoted if it contains special characters", func() {
-			testSchema := utils.DBObject{0, `schema,name`, ""}
+			testSchema := utils.DBObject{0, `schema,name`, sql.NullString{"", false}}
 			expected := `"schema,name"`
 			Expect(testSchema.ToString()).To(Equal(expected))
 		})
@@ -154,10 +155,10 @@ var _ = Describe("utils/table tests", func() {
 	Describe("GetUniqueSchemas", func() {
 		alphabeticalAFoo := utils.Table{1, 0, "otherschema", "foo"}
 		alphabeticalABar := utils.Table{1, 0, "otherschema", "bar"}
-		schemaOther := utils.DBObject{2, "otherschema", ""}
+		schemaOther := utils.DBObject{2, "otherschema", sql.NullString{"", false}}
 		alphabeticalBFoo := utils.Table{2, 0, "public", "foo"}
 		alphabeticalBBar := utils.Table{2, 0, "public", "bar"}
-		schemaPublic := utils.DBObject{1, "public", "Standard public schema"}
+		schemaPublic := utils.DBObject{1, "public", sql.NullString{"Standard public schema", true}}
 		schemas := []utils.DBObject{schemaOther, schemaPublic}
 
 		It("has multiple tables in a single schema", func() {

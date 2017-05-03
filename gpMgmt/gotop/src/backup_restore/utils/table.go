@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"database/sql"
 	"fmt"
 	"regexp"
 	"sort"
@@ -13,21 +14,21 @@ var (
 	 * lowercast letters, digits, and underscores.
 	 */
 	unquotedIdentifier = regexp.MustCompile(`^([a-z_][a-z0-9_]*)$`)
-	quotedIdentifier  = regexp.MustCompile(`^"(.+)"$`)
+	quotedIdentifier   = regexp.MustCompile(`^"(.+)"$`)
 
 	quotedOrUnquotedString = regexp.MustCompile(`^(?:\"(.*)\"|(.*))\.(?:\"(.*)\"|(.*))$`)
 
 	// Swap between double quotes and paired double quotes, and between literal whitespace characters and escape sequences
-	replacerTo   = strings.NewReplacer("\"", "\"\"", `
+	replacerTo = strings.NewReplacer("\"", "\"\"", `
 `, "\\n", "\n", "\\n", "	", "\\t", "\t", "\\t")
 	replacerFrom = strings.NewReplacer("\"\"", "\"", "\\n", "\n", "\\t", "\t")
 )
 
 // This will mostly be used for schemas, but can be used for any database object with an oid.
 type DBObject struct {
-	ObjOid  uint32
-	ObjName string
-	ObjComment string
+	ObjOid     uint32
+	ObjName    string
+	ObjComment sql.NullString
 }
 
 type Table struct {
@@ -71,7 +72,7 @@ func DBObjectFromString(name string) DBObject {
 	} else {
 		logger.Fatal("\"%s\" is not a valid identifier", name)
 	}
-	return DBObject{0, object, ""}
+	return DBObject{0, object, sql.NullString{"", false}}
 }
 
 /* Parse an appropriately-escaped schema.table string into a Table.  The Table's

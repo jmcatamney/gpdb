@@ -150,8 +150,12 @@ func PrintConstraintStatements(predataFile io.Writer, constraints []string, fkCo
 
 func PrintCreateSchemaStatements(predataFile io.Writer, schemas []utils.DBObject) {
 	for _, schema := range schemas {
+		fmt.Fprintln(predataFile)
 		if schema.ObjName != "public" {
-			fmt.Fprintf(predataFile, "\n\nCREATE SCHEMA %s;", schema.ToString())
+			fmt.Fprintf(predataFile, "\nCREATE SCHEMA %s;", schema.ToString())
+		}
+		if schema.ObjComment.Valid {
+			fmt.Fprintf(predataFile, "\nCOMMENT ON SCHEMA %s IS '%s';", schema.ToString(), schema.ObjComment.String)
 		}
 	}
 }

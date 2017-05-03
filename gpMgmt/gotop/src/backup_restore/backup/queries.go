@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func GetAllUserSchemas(connection *utils.DBConn) []utils.DBObject{
+func GetAllUserSchemas(connection *utils.DBConn) []utils.DBObject {
 	query := `
 SELECT
 	oid AS objoid,
@@ -15,7 +15,7 @@ SELECT
 	obj_description(oid, 'pg_namespace') AS objcomment
 FROM pg_namespace
 WHERE nspname NOT LIKE 'pg_temp_%'
-AND nspname NOT LIKE 'pg_toast_%'
+AND nspname NOT LIKE 'pg_toast%'
 AND nspname NOT IN ('gp_toolkit', 'information_schema', 'pg_aoseg', 'pg_bitmapindex', 'pg_catalog')
 ORDER BY objname;`
 	results := make([]utils.DBObject, 0)
@@ -235,15 +235,15 @@ func GetAllSequences(connection *utils.DBConn) []utils.DBObject {
 }
 
 type QuerySequence struct {
-	Name string `db:"sequence_name"`
-	LastVal int64 `db:"last_value"`
-	Increment int64 `db:"increment_by"`
-	MaxVal int64 `db:"max_value"`
-	MinVal int64 `db:"min_value"`
-	CacheVal int64 `db:"cache_value"`
-	LogCnt int64 `db:"log_cnt"`
-	IsCycled bool `db:"is_cycled"`
-	IsCalled bool `db:"is_called"`
+	Name      string `db:"sequence_name"`
+	LastVal   int64  `db:"last_value"`
+	Increment int64  `db:"increment_by"`
+	MaxVal    int64  `db:"max_value"`
+	MinVal    int64  `db:"min_value"`
+	CacheVal  int64  `db:"cache_value"`
+	LogCnt    int64  `db:"log_cnt"`
+	IsCycled  bool   `db:"is_cycled"`
+	IsCalled  bool   `db:"is_called"`
 }
 
 func GetSequence(connection *utils.DBConn, seqName string) QuerySequence {

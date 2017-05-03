@@ -401,4 +401,23 @@ SET SUBPARTITION TEMPLATE
 			Expect(results[1].Increment).To(Equal(int64(1)))
 		})
 	})
+	Describe("GetAllUserSchemas", func() {
+		headerSchema := []string{"objoid", "objname", "objcomment"}
+		schemaOne := []driver.Value{1, "schema_one", nil}
+		schemaTwo := []driver.Value{2, "schema_two", "some_comment"}
+
+		It("returns a slice of definitions for all schemas", func() {
+			fakeSchema := sqlmock.NewRows(headerSchema).AddRow(schemaOne...).AddRow(schemaTwo...)
+			mock.ExpectQuery("SELECT (.*)").WillReturnRows(fakeSchema)
+			results := backup.GetAllUserSchemas(connection)
+			Expect(len(results)).To(Equal(2))
+			Expect(results[0].ObjOid).To(Equal(uint32(1)))
+			Expect(results[0].ObjName).To(Equal("schema_one"))
+			Expect(results[0].ObjComment.Valid).To(Equal(false))
+			Expect(results[1].ObjOid).To(Equal(uint32(2)))
+			Expect(results[1].ObjName).To(Equal("schema_two"))
+			Expect(results[1].ObjComment.Valid).To(Equal(true))
+			Expect(results[1].ObjComment.String).To(Equal("some_comment"))
+		})
+	})
 })
