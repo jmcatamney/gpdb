@@ -33,6 +33,7 @@ func DoSetup() { // Handles setup that must be done after parsing flags
 	}
 	connection = utils.NewDBConn(*dbname)
 	connection.Connect()
+	connection.Exec("SET application_name TO 'gpbackup'")
 }
 
 func DoBackup() {
