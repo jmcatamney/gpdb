@@ -30,13 +30,14 @@ var (
  * Command-line flags
  */
 var (
-	copyPath   *string
-	debug      *bool
-	fileToCopy *string
-	hostFile   *string
-	hostNames  ArrayFlags
-	quiet      *bool
-	verbose    *bool
+	copyPath       *string
+	debug          *bool
+	fileToCopy     *string
+	hostFile       *string
+	hostNames      ArrayFlags
+	quiet          *bool
+	verbose        *bool
+	perSegmentCopy *bool
 )
 
 /*
@@ -45,4 +46,20 @@ var (
 
 func SetCluster(cluster cluster.Cluster) {
 	globalCluster = cluster
+}
+
+func SetHostnames(hosts ArrayFlags) {
+	hostNames = hosts
+}
+
+func SetCopyPath(path string) {
+	copyPath = &path
+}
+
+func SetFileToCopy(file string) {
+	fileToCopy = &file
+}
+
+func SetHostFile(file string) {
+	hostFile = &file
 }

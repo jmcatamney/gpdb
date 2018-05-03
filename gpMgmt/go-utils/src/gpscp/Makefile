@@ -31,6 +31,7 @@ dependencies :
 		go get github.com/golang/lint/golint
 		go get github.com/onsi/ginkgo/ginkgo
 		go get github.com/alecthomas/gometalinter
+		go get github.com/greenplum-db/gp-common-go-libs/cluster
 		gometalinter --install
 		go get github.com/golang/dep/cmd/dep
 		dep ensure
