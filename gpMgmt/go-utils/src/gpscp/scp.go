@@ -35,17 +35,29 @@ func DoInit() {
 
 func DoFlagValidation() {
 	flag.Parse()
+	CheckExclusiveFlags("hostFile", "hostNames")
 }
 
 // This function handles setup that must be done after parsing flags.
 func DoSetup() {
-	//SetLoggerVerbosity()
+	SetLoggerVerbosity()
 
 	globalCluster = cluster.NewCluster(nil)
 }
 
+func SetLoggerVerbosity() {
+	if *quiet {
+		gplog.SetVerbosity(gplog.LOGERROR)
+	} else if *debug {
+		gplog.SetVerbosity(gplog.LOGDEBUG)
+	} else if *verbose {
+		gplog.SetVerbosity(gplog.LOGVERBOSE)
+	}
+}
+
 func DoScp() {
-	hostnames := GetHostnames()
+	if *hostFile != "" {
+	}
 	commands := BuildCommands(hostnames)
 	clusterErrors := globalCluster.ExecuteClusterCommand(cluster.ON_HOSTS, commands)
 	fmt.Println(clusterErrors)

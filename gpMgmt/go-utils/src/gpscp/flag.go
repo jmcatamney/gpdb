@@ -6,7 +6,6 @@ package gpscp
 
 import (
 	"flag"
-	"regexp"
 	"strings"
 
 	"github.com/greenplum-db/gp-common-go-libs/gplog"
@@ -60,18 +59,8 @@ func (i *ArrayFlags) Set(value string) error {
  * Functions for validating flag values
  */
 
-/*
- * Restoring a future-dated backup is allowed (e.g. the backup was taken in a
- * different time zone that is ahead of the restore time zone), so only check
- * format, not whether the timestamp is earlier than the current time.
- */
-func IsValidTimestamp(timestamp string) bool {
-	timestampFormat := regexp.MustCompile(`^([0-9]{14})$`)
-	return timestampFormat.MatchString(timestamp)
-}
-
-func ValidateBackupDir(path string) {
+func ValidateAbsolutePath(flag string, path string) {
 	if len(path) > 0 && string(path[0]) != "/" {
-		gplog.Fatal(errors.Errorf("Absolute path required for backupdir."), "")
+		gplog.Fatal(errors.Errorf("Value of %s must be an absolute path.", flag), "")
 	}
 }
