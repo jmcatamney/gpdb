@@ -1,4 +1,4 @@
-package gpscp
+package main
 
 /*
  * This file contains functions and structs relating to flag parsing.

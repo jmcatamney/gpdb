@@ -1,8 +1,6 @@
-package gpscp
+package main
 
 import (
-	"sync"
-
 	"github.com/greenplum-db/gp-common-go-libs/cluster"
 )
 
@@ -14,31 +12,6 @@ import (
 /*
  * Non-flag variables
  */
-var (
-	globalCluster cluster.Cluster
-	wasTerminated bool
-
-	/*
-	 * Used for synchronizing DoCleanup.  In DoInit() we increment the group
-	 * and then wait for at least one DoCleanup to finish, either in DoTeardown
-	 * or the signal handler.
-	 */
-	CleanupGroup *sync.WaitGroup
-)
-
-/*
- * Command-line flags
- */
-var (
-	copyPath       *string
-	debug          *bool
-	fileToCopy     *string
-	hostFile       *string
-	hostNames      ArrayFlags
-	quiet          *bool
-	verbose        *bool
-	perSegmentCopy *bool
-)
 
 /*
  * Setter functions
@@ -53,11 +26,11 @@ func SetHostnames(hosts ArrayFlags) {
 }
 
 func SetCopyPath(path string) {
-	copyPath = &path
+	copyPath = path
 }
 
 func SetFileToCopy(file string) {
-	fileToCopy = &file
+	fileToCopy = file
 }
 
 func SetHostFile(file string) {
