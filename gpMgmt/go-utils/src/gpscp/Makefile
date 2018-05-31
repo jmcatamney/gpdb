@@ -21,18 +21,19 @@ TARGET_PLATFORM := $(if $(BUILD_TARGET),GOOS=$(BUILD_TARGET) GOARCH=$(ARCH),)
 
 .NOTPARALLEL:
 
-all : dependencies build
+all : depend build
 
 # The inheritied LD_LIBRARY_PATH setting causes git clone in go get to fail.  Hence, nullifying it.
-dependencies :  export LD_LIBRARY_PATH =
-dependencies :
+depend :  export LD_LIBRARY_PATH =
+depend :
 		go get -u github.com/golang/protobuf/protoc-gen-go
-		go get golang.org/x/tools/cmd/goimports
-		go get github.com/golang/lint/golint
-		go get github.com/onsi/ginkgo/ginkgo
 		go get github.com/alecthomas/gometalinter
-		go get github.com/greenplum-db/gp-common-go-libs/cluster
 		gometalinter --install
+		go get github.com/golang/lint/golint
+		go get github.com/greenplum-db/gp-common-go-libs/cluster
+		go get github.com/onsi/ginkgo/ginkgo
+		go get github.com/spf13/cobra
+		go get golang.org/x/tools/cmd/goimports
 		go get github.com/golang/dep/cmd/dep
 		dep ensure
 
