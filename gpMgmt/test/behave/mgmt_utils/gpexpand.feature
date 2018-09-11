@@ -94,6 +94,8 @@ Feature: expand the cluster by adding more segments
         When the user runs gpexpand with the latest gpexpand_inputfile
         Then gpexpand should return a return code of 0
         And verify that the cluster has 2 new segments
+        And the user runs "gpcheckcat gptest"
+        And gpcheckcat should return a return code of 0
 
     @gpexpand_no_mirrors
     @gpexpand_host
@@ -113,6 +115,8 @@ Feature: expand the cluster by adding more segments
         When the user runs gpexpand with the latest gpexpand_inputfile
         Then gpexpand should return a return code of 0
         And verify that the cluster has 2 new segments
+        And the user runs "gpcheckcat gptest"
+        And gpcheckcat should return a return code of 0
 
     @gpexpand_no_mirrors
     @gpexpand_host_and_segment
@@ -189,3 +193,5 @@ Feature: expand the cluster by adding more segments
         When the user runs gpexpand with the latest gpexpand_inputfile
         Then gpexpand should return a return code of 0
         And verify that the cluster has 14 new segments
+        And the user runs "gpcheckcat gptest"
+        And gpcheckcat should return a return code of 0
