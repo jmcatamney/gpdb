@@ -94,6 +94,7 @@ Feature: expand the cluster by adding more segments
         And user has created expansionranktest tables
         And 4000 rows are inserted into table "expansionranktest8" in schema "public" with column type list "int"
         When the user runs gpexpand with the latest gpexpand_inputfile
+        And user has fixed the expansion order for tables
         And the user runs gpexpand to redistribute with the -n flag
         Then gpexpand should return a return code of 0
         And verify that the cluster has 2 new segments
