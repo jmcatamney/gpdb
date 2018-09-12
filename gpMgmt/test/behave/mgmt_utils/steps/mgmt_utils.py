@@ -2064,6 +2064,12 @@ def impl(context):
     context.command = gpexpand
     gpexpand.redistribute(duration=True)
 
+@when('the user runs gpexpand to redistribute with the -n flag')
+def impl(context):
+    gpexpand = Gpexpand(context, working_directory=context.working_directory, database='gptest')
+    context.command = gpexpand
+    gpexpand.redistribute(parallel=True)
+
 @when('the user runs gpexpand with a static inputfile for a single-node cluster with mirrors')
 def impl(context):
     inputfile_contents = """sdw1:sdw1:20502:/tmp/gpexpand_behave/data/primary/gpseg2:6:2:p
@@ -2176,6 +2182,20 @@ def impl(context):
                             "%d") % rank
 
         return
+
+@then('all tables were expanded successfully')
+def impl(context):
+    dbname = 'gptest'
+    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+        query = """select rank from gpexpand.status_detail WHERE rank IN (7,8,9)"""
+        cursor = dbconn.execSQL(conn, query)
+
+        num_expanded = len(cursor.fetchall())
+        if num_expanded != 3:
+            raise Exception("Expected 3 tables to have been expanded, got %d instead" % num_expanded)
+
+        return
+
 
 @given('an FTS probe is triggered')
 def impl(context):

@@ -78,6 +78,28 @@ Feature: expand the cluster by adding more segments
         Then the tables were expanded in the specified order
 
     @gpexpand_no_mirrors
+    @gpexpand_parallel
+    Scenario: redistribution occurs in parallel
+        Given a working directory of the test as '/tmp/gpexpand_behave'
+        And the database is killed on hosts "mdw,sdw1"
+        And the user runs command "rm -rf /tmp/gpexpand_behave/*"
+        And a temporary directory to expand into
+        And the database is not running
+        And a cluster is created with no mirrors on "mdw" and "sdw1"
+        And database "gptest" exists
+        And there are no gpexpand_inputfiles
+        And the cluster is setup for an expansion on hosts "mdw,sdw1"
+        And the user runs gpexpand interview to add 2 new segment and 0 new host "ignored.host"
+        And the number of segments have been saved
+        And user has created expansionranktest tables
+        And 4000 rows are inserted into table "expansionranktest8" in schema "public" with column type list "int"
+        When the user runs gpexpand with the latest gpexpand_inputfile
+        And the user runs gpexpand to redistribute with the -n flag
+        Then gpexpand should return a return code of 0
+        And verify that the cluster has 2 new segments
+        And all tables were expanded successfully
+
+    @gpexpand_no_mirrors
     @gpexpand_segment
     Scenario: expand a cluster that has no mirrors
         Given a working directory of the test as '/tmp/gpexpand_behave'

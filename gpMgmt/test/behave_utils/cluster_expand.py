@@ -67,7 +67,7 @@ class Gpexpand:
         input_files = sorted(glob.glob('%s/gpexpand_inputfile*' % self.working_directory))
         run_gpcommand(self.context, "gpexpand -D %s -i %s" % (self.database, input_files[-1]))
 
-    def redistribute(self, duration=False, endtime=False):
+    def redistribute(self, duration=False, endtime=False, parallel=False):
         # Can flake with "[ERROR]:-End time occurs in the past"
         # if duration is set too low.
         if duration:
@@ -75,6 +75,8 @@ class Gpexpand:
         elif endtime:
             newtime = datetime.now() + timedelta(seconds=2)
             flags = " --end \"%s\"" % newtime.strftime("%Y-%m-%d %H:%M:%S")
+        elif parallel:
+            flags = " -n 4"
         else:
             flags = ""
 
