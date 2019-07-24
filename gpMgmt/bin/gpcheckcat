@@ -321,6 +321,11 @@ def connect(user=None, password=None, host=None, port=None,
         logger.debug('connecting to %s:%s %s' % (host, port, database))
         db = pg.connect(host=host, port=port, user=user,
                         passwd=password, dbname=database, opt=options)
+
+        # unset search path due to CVE-2018-1058
+        ALWAYS_SECURE_SEARCH_PATH_SQL = "SELECT pg_catalog.set_config('search_path', '', false)"
+        db.query(ALWAYS_SECURE_SEARCH_PATH_SQL)
+
     except pg.InternalError, ex:
         logger.fatal('could not connect to %s: "%s"' %
                      (database, str(ex).strip()))
