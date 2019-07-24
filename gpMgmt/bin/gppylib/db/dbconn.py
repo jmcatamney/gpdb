@@ -232,6 +232,9 @@ def connect(dburl, utility=False, verbose=False,
     if unsetSearchPath:
         ALWAYS_SECURE_SEARCH_PATH_SQL = "SELECT pg_catalog.set_config('search_path', '', false)"
         execSQL(conn, ALWAYS_SECURE_SEARCH_PATH_SQL).close()
+        # we commit() as we don't want to be in an implicit transaction started
+        # by the previous execSQL()
+        conn.commit()
 
     def __enter__(self):
         return self
