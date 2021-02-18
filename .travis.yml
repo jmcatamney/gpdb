@@ -31,6 +31,11 @@ addons:
 matrix:
     include:
         # OS and Compiler variations
+        #
+        # NOTE: Some of the docker containers set LC_ALL and LC_CTYPE to
+        # values that are not specified on the system's locale as found
+        # via "locale -a". This causes gpinitsystem and possibly initdb
+        # to fail. Set these environment variables to the system's locale.
         # ----------------------------------------------------------------
         #
         # Ubuntu Bionic, gcc 8
@@ -40,6 +45,7 @@ matrix:
           env:
               - T=debug C=""
               - OVERRIDE_CC="CC=gcc-8" OVERRIDE_CXX="CXX=g++-8"
+              - LC_CTYPE="en_US.utf8" LC_ALL="en_US.utf8" # see NOTE above
           addons:
               apt:
                   sources:
@@ -53,6 +59,7 @@ matrix:
           env:
               - T=debug C=""
               - OVERRIDE_CC="CC=clang-7" OVERRIDE_CXX="CXX=clang++-7"
+              - LC_CTYPE="en_US.utf8" LC_ALL="en_US.utf8" # see NOTE above
           addons:
               apt:
                   sources:
