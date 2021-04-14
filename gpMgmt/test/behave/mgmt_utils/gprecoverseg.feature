@@ -398,3 +398,32 @@ Feature: gprecoverseg tests
           And the tablespace is valid
           And the row count from table "public.before_host_is_down" in "gptest" is verified against the saved data
           And the row count from table "public.after_host_is_down" in "gptest" is verified against the saved data
+
+    @concourse_cluster
+    Scenario: recovering segments with mismatched primary and mirror tablespaces succeeds
+        Given the database is running
+          And all the segments are running
+
+          # Add one tablespace to check a mismatched mirror, one to check a mismatched primary, and one "control"
+          And three tablespaces are created with data
+          And the symlink for tablespace space_one is set to a different value for the primary segment for content 0
+          And the symlink for tablespace space_two is set to a different value for the mirror segment for content 1
+          And a tablespace map file is created
+
+          And the primary segment for content 0 is killed
+          And the mirror segment for content 1 is killed
+
+          When the user runs "gprecoverseg -avF --tablespace-map-file /tmp/tablespace_map_file"
+          Then gprecoverseg should return a return code of 0
+          And all the segments are running
+          And user can start transactions
+          And the user runs "gprecoverseg -ra"
+          And gprecoverseg should return a return code of 0
+          And all the segments are running
+          And the segments are synchronized
+          And user can start transactions
+
+          # verify the data
+          And all three tablespaces are valid
+          And tablespace space_one for the primary segment for content 0 is recovered to its nonstandard location
+          And tablespace space_two for the mirror segment for content 1 is recovered to its nonstandard location

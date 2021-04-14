@@ -108,6 +108,7 @@ class GpRecoversegTestCase(GpTestCase):
         options.spareDataDirectoryFile = self.config_file_path
         options.showProgress = True
         options.showProgressInplace = True
+        options.tablespaceMapFile = None
 
         # import HERE so that patches are already in place!
         from gppylib.programs.clsRecoverSegment import GpRecoverSegmentProgram
@@ -223,6 +224,7 @@ class GpRecoversegTestCase(GpTestCase):
         options.spareDataDirectoryFile = None
         options.showProgress = True
         options.showProgressInplace = True
+        options.tablespaceMapFile = None
         # import HERE so that patches are already in place!
         from gppylib.programs.clsRecoverSegment import GpRecoverSegmentProgram
         self.subject = GpRecoverSegmentProgram(options)
@@ -247,6 +249,7 @@ class GpRecoversegTestCase(GpTestCase):
         options.spareDataDirectoryFile = None
         options.showProgress = True
         options.showProgressInplace = True
+        options.tablespaceMapFile = None
         # import HERE so that patches are already in place!
         from gppylib.programs.clsRecoverSegment import GpRecoverSegmentProgram
         self.subject = GpRecoverSegmentProgram(options)

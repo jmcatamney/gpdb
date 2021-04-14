@@ -1,12 +1,14 @@
+import os
 import pipes
 import tempfile
 
 from behave import given, then
 from pygresql import pg
 
+from gppylib.commands.base import Command, REMOTE
 from gppylib.db import dbconn
 from gppylib.gparray import GpArray
-from test.behave_utils.utils import run_cmd
+from test.behave_utils.utils import run_cmd, wait_for_unblocked_transactions
 
 class Tablespace:
     def __init__(self, name):
@@ -178,6 +180,14 @@ def impl(context):
     _create_tablespace_with_data(context, "myspace")
 
 
+@given('three tablespaces are created with data')
+def impl(context):
+    _create_tablespace_with_data(context, "space_one")
+    _create_tablespace_with_data(context, "space_two")
+    _create_tablespace_with_data(context, "space_three")
+
+
+
 def _create_tablespace_with_data(context, name):
     if 'tablespaces' not in context:
         context.tablespaces = {}
@@ -187,6 +197,13 @@ def _create_tablespace_with_data(context, name):
 @then('the tablespace is valid')
 def impl(context):
     context.tablespaces["outerspace"].verify()
+
+
+@then('all three tablespaces are valid')
+def impl(context):
+    context.tablespaces["space_one"].verify()
+    context.tablespaces["space_two"].verify()
+    context.tablespaces["space_three"].verify()
 
 
 @then('the tablespace is valid on the standby master')
@@ -209,3 +226,95 @@ def impl(context):
     for tablespace in context.tablespaces.values():
         tablespace.cleanup()
     context.tablespaces = {}
+
+
+@given('the symlink for tablespace {name} is set to a different value for the {seg_type} segment for content {content}')
+def impl(context, name, seg_type, content):
+    change_tablespace_location(context, name, seg_type, content, reset=False)
+
+@then('the symlink for tablespace {name} is reset for the {seg_type} segment for content {content}')
+def impl(context, name, seg_type, content):
+    change_tablespace_location(context, name, seg_type, content, reset=True)
+
+
+def change_tablespace_location(context, name, seg_type, content, reset=False):
+    st = None
+    if seg_type in ["primary", "mirror"]:
+        st = seg_type[0]
+    else:
+        raise Exception("Invalid segment type: %s.  Valid types are primary and mirror." % seg_type)
+
+    with dbconn.connect(dbconn.DbURL(), unsetSearchPath=False) as conn:
+        dbid, host, datadir = dbconn.execSQLForSingletonRow(conn,
+            "SELECT dbid, hostname, datadir FROM gp_segment_configuration WHERE content = %s and preferred_role = '%s'" % (content, st))
+        oid = dbconn.execSQLForSingleton(conn, "SELECT oid FROM pg_tablespace WHERE spcname = '%s'" % name)
+        standard_loc = dbconn.execSQLForSingleton(conn,
+            "SELECT tblspc_loc FROM gp_tablespace_location(%s) WHERE gp_segment_id=%s" % (oid, content))
+    different_loc = "%s_new" % standard_loc
+    if reset:
+        old_loc, new_loc = different_loc, standard_loc
+    else:
+        old_loc, new_loc = standard_loc, different_loc
+        if "tablespace_mappings" not in context:
+            context.tablespace_mappings = {}
+        context.tablespace_mappings[content] = [old_loc, new_loc]
+
+    cmd = Command("set tablespace location", cmdStr = '''cd %s/pg_tblspc;
+            OID=%s;
+            OLD_LOC=%s;
+            NEW_LOC=%s;
+            mkdir -p \$NEW_LOC;
+            mv \$OLD_LOC/%s \$NEW_LOC/%s;
+            ln -s \$NEW_LOC/%s newlink;
+            rm \$OID;
+            mv newlink \$OID;
+            ''' % (datadir, oid, old_loc, new_loc, dbid, dbid, dbid), ctxt=REMOTE, remoteHost=host)
+    cmd.run(validateAfter=True)
+
+@given('the {seg_type} segment for content {content} is killed')
+def impl(context, seg_type, content):
+    st = None
+    if seg_type in ["primary", "mirror"]:
+        st = seg_type[0]
+    else:
+        raise Exception("Invalid segment type: %s.  Valid types are primary and mirror." % seg_type)
+
+    with dbconn.connect(dbconn.DbURL(), unsetSearchPath=False) as conn:
+        host, port = dbconn.execSQLForSingletonRow(conn,
+            "SELECT hostname, port FROM gp_segment_configuration WHERE content = %s and preferred_role = '%s'" % (content, st))
+    cmd = Command("kill segment", cmdStr="ps aux | grep '\-p %s' | grep -v grep | awk '{print \$2}' | xargs kill -9" % port, ctxt=REMOTE, remoteHost=host)
+    cmd.run(validateAfter=True)
+    wait_for_unblocked_transactions(context)
+
+@given('a tablespace map file is created')
+def impl(context):
+    if "tablespace_mappings" not in context:
+        raise Exception("No mismatched segments exist, a tablespace mapping file cannot be created")
+    with open('/tmp/tablespace_map_file', 'w') as fd:
+        for content in context.tablespace_mappings:
+            old_loc, new_loc = context.tablespace_mappings[content]
+            fd.write('%s:%s=%s\n' % (content, old_loc, new_loc))
+        fd.write('42:/tmp/foo=/tmp/bar') # write a line for a nonexistent dbid to ensure gprecoverseg doesn't error out on that
+
+@then('tablespace {name} for the {seg_type} segment for content {content} is recovered to its nonstandard location')
+def impl(context, name, seg_type, content):
+    st = None
+    if seg_type in ["primary", "mirror"]:
+        st = seg_type[0]
+    else:
+        raise Exception("Invalid segment type: %s.  Valid types are primary and mirror." % seg_type)
+
+    if "tablespace_mappings" not in context:
+        raise Exception("No mismatched segments exist, the location of %s on %s %s cannot be checked" % (name, seg_type, content))
+
+    with dbconn.connect(dbconn.DbURL(), unsetSearchPath=False) as conn:
+        dbid, host, datadir = dbconn.execSQLForSingletonRow(conn,
+            "SELECT dbid, hostname, datadir FROM gp_segment_configuration WHERE content = %s and preferred_role = '%s'" % (content, st))
+        oid = dbconn.execSQLForSingleton(conn, "SELECT oid FROM pg_tablespace WHERE spcname='%s'" % name)
+
+    nonstandard_loc = "%s/%s" % (context.tablespace_mappings[content][1], dbid)
+    cmd = Command('check tablespace location', cmdStr="readlink %s/pg_tblspc/%s" % (datadir, oid), ctxt=REMOTE, remoteHost=host)
+    cmd.run(validateAfter=True)
+    tablespace_path = cmd.get_results().stdout.strip()
+    if tablespace_path != nonstandard_loc:
+        raise Exception("Expected tablespace location %s, got location %s" % (nonstandard_loc, tablespace_path))

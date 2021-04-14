@@ -468,6 +468,7 @@ class GpRecoverSegmentProgram:
             self.logger.exception('Syncing of Greenplum Database extensions has failed.')
             self.logger.warning('Please run gppkg --clean after successful segment recovery.')
 
+
     def displayRecovery(self, mirrorBuilder, gpArray):
         self.logger.info('Greenplum instance recovery parameters')
         self.logger.info('---------------------------------------------------------')
@@ -598,6 +599,7 @@ class GpRecoverSegmentProgram:
                 logger.warning("Not recovering segment %d because %s is unreachable" % (segmentPair.mirrorDB.dbid, segmentPair.mirrorDB.getSegmentHostName()))
                 gpArray.segmentPairs[i].mirrorDB.unreachable = True
 
+
         if not gpArray.hasMirrors:
             raise ExceptionNoStackTraceNeeded(
                 'GPDB Mirroring replication is not configured for this Greenplum Database instance.')
@@ -670,8 +672,12 @@ class GpRecoverSegmentProgram:
             if new_hosts:
                 self.syncPackages(new_hosts)
 
+            # sync tablespace map file, if it exists
+            if self.__options.tablespaceMapFile:
+                self.copy_tablespace_map_file_to_segments(gpArray, mirrorBuilder, self.__options.tablespaceMapFile)
+
             config_primaries_for_replication(gpArray, self.__options.hba_hostnames)
-            if not mirrorBuilder.buildMirrors("recover", gpEnv, gpArray):
+            if not mirrorBuilder.buildMirrors("recover", gpEnv, gpArray, self.__options.tablespaceMapFile):
                 sys.exit(1)
 
             confProvider.sendPgElogFromMaster("Recovery of %d segment(s) has been started." % \
@@ -714,6 +720,18 @@ class GpRecoverSegmentProgram:
             raise Exception("Heap checksum setting differences reported on segments")
         self.logger.info("Heap checksum setting is consistent between master and the segments that are candidates "
                          "for recoverseg")
+
+    def copy_tablespace_map_file_to_segments(self, gpArray, mirrorBuilder, map_filename):
+        failed_segments = [target.getFailedSegment() for target in mirrorBuilder.getMirrorsToBuild()]
+        if len(failed_segments) == 0:
+            self.logger.info("There are no segments to recover, skipping copy of tablespace map file.")
+            return
+
+        master_host = gpArray.master.getSegmentHostName()
+        dest_hosts = [seg.getSegmentHostName() for seg in failed_segments if seg.getSegmentHostName() != master_host]
+        if len(dest_hosts) > 0: # no need to copy the file if all failed segments are on the master host
+            cmd = Command('copy tablespace map file to segments', cmdStr = "gpscp -h %s %s =:%s" % (' -h '.join(dest_hosts), map_filename, map_filename))
+            cmd.run(validateAfter=True)
 
     def cleanup(self):
         if self.__pool:
@@ -779,6 +797,10 @@ class GpRecoverSegmentProgram:
                          dest='rebalanceSegments', help='Rebalance synchronized segments.')
         addTo.add_option('', '--hba-hostnames', action='store_true', dest='hba_hostnames',
                          help='use hostnames instead of CIDR in pg_hba.conf')
+        addTo.add_option("", "--tablespace-map-file", type="string",
+                         dest="tablespaceMapFile",
+                         metavar="<tablespaceMapFile>",
+                         help="File giving primary-mirror tablespace mapping if differing tablespace locations are used")
 
         parser.set_defaults()
         return parser
