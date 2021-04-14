@@ -442,6 +442,7 @@ class GpRecoverSegmentProgram:
             self.logger.exception('Syncing of Greenplum Database extensions has failed.')
             self.logger.warning('Please run gppkg --clean after successful segment recovery.')
 
+
     def displayRecovery(self, mirrorBuilder, gpArray):
         self.logger.info('Greenplum instance recovery parameters')
         self.logger.info('---------------------------------------------------------')
@@ -645,7 +646,7 @@ class GpRecoverSegmentProgram:
                 self.syncPackages(new_hosts)
 
             config_primaries_for_replication(gpArray, self.__options.hba_hostnames)
-            if not mirrorBuilder.buildMirrors("recover", gpEnv, gpArray):
+            if not mirrorBuilder.buildMirrors("recover", gpEnv, gpArray, self.__options.tablespaceMapFile):
                 sys.exit(1)
 
             self.trigger_fts_probe(port=gpEnv.getCoordinatorPort())
@@ -755,6 +756,10 @@ class GpRecoverSegmentProgram:
                          dest='rebalanceSegments', help='Rebalance synchronized segments.')
         addTo.add_option('', '--hba-hostnames', action='store_true', dest='hba_hostnames',
                          help='use hostnames instead of CIDR in pg_hba.conf')
+        addTo.add_option("", "--tablespace-map-file", type="string",
+                         dest="tablespaceMapFile",
+                         metavar="<tablespaceMapFile>",
+                         help="File giving primary-mirror tablespace mapping if differing tablespace locations are used")
 
         parser.set_defaults()
         return parser
