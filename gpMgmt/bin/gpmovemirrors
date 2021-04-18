@@ -177,6 +177,25 @@ def lookupGpdb(address, port, dataDirectory):
     return None
 
 # -------------------------------------------------------------------------
+def getsegmentTablespaceDirs(dataDirectory):
+    """ Create list of user-created tablespace locations for a segment data directory """
+
+    tblspclocs = []
+    gettblspcoids_sql = "select oid from pg_tablespace where spcname not in ('pg_default', 'pg_global')"
+    gettblspclocs_sql = "select t.tblspc_loc||'/'||dbid from gp_tablespace_location(%s) t, gp_segment_configuration c where t.gp_segment_id = c.content and c.datadir ='%s'"
+
+    with dbconn.connect(dbconn.DbURL()) as conn:
+        tblspcoids = dbconn.execSQL(conn, gettblspcoids_sql).fetchall()
+
+        # Use the tablespace oids to get the tablespace locations
+    for row in tblspcoids:
+        tblspcoid = row[0]
+        with dbconn.connect(dbconn.DbURL()) as conn:
+            tblspclocs.append(dbconn.execSQL(conn, gettblspclocs_sql % (tblspcoid, dataDirectory)).fetchall())
+
+    return tblspclocs
+
+# -------------------------------------------------------------------------
 # -------------------------------------------------------------------------
 class Mirror:
     """ This class represents information about a mirror. """
@@ -438,6 +457,15 @@ try:
         pool = WorkerPool(numWorkers=numberOfWorkers)
         for mirror in mirrorsToDelete:
             logger.info("About to remove old mirror segment directory: " + mirror.dataDirectory)
+            try:
+                tblspc_directory = getsegmentTablespaceDirs(mirror.dataDirectory)
+                for tblspc_dir in tblspc_directory:
+                    cmd = RemoveDirectory("remove old mirror tablespace directories", "".join(tblspc_dir[0]), ctxt=REMOTE,
+                                          remoteHost=mirror.address)
+                    pool.addCommand(cmd)
+            except:
+                logger.error("Unable to remove old mirror tablespace directory: " + mirror.dataDirectory)
+
             cmd = RemoveDirectory("remove old mirror segment directories", mirror.dataDirectory, ctxt=REMOTE,
                                   remoteHost=mirror.address)
             pool.addCommand(cmd)
