@@ -205,7 +205,7 @@ class GpMirrorListToBuild:
                                                                 timeStamp,
                                                                 targetSegment.getSegmentDbId())
 
-    def buildMirrors(self, actionName, gpEnv, gpArray, tablespaceMapFile=None):
+    def buildMirrors(self, actionName, gpEnv, gpArray, tablespaceMappingFile=None):
         """
         Build the mirrors.
 
@@ -261,7 +261,7 @@ class GpMirrorListToBuild:
         self.__ensureMarkedDown(gpEnv, toEnsureMarkedDown)
         if not self.__forceoverwrite:
             self.__cleanUpSegmentDirectories(cleanupDirectives)
-        self.__copySegmentDirectories(gpEnv, gpArray, copyDirectives, tablespaceMapFile)
+        self.__copySegmentDirectories(gpEnv, gpArray, copyDirectives, tablespaceMappingFile)
 
         # update and save metadata in memory
         for toRecover in self.__mirrorsToBuild:
@@ -555,7 +555,7 @@ class GpMirrorListToBuild:
             unix.MakeDirectory("create blank directory for segment", subDir).run(validateAfter=True)
             unix.Chmod.local('set permissions on blank dir', subDir, '0700')
 
-    def __copySegmentDirectories(self, gpEnv, gpArray, directives, tablespaceMapFile=None):
+    def __copySegmentDirectories(self, gpEnv, gpArray, directives, tablespaceMappingFile=None):
         """
         directives should be composed of GpCopySegmentDirectoryDirective values
         """
@@ -581,7 +581,7 @@ class GpMirrorListToBuild:
         destSegmentByHost = GpArray.getSegmentsByHostName(destSegments)
         newSegmentInfo = gp.ConfigureNewSegment.buildSegmentInfoForNewSegment(destSegments, isTargetReusedLocation)
 
-        def createConfigureNewSegmentCommand(hostName, cmdLabel, validationOnly, tablespaceMapFile=None):
+        def createConfigureNewSegmentCommand(hostName, cmdLabel, validationOnly, tablespaceMappingFile=None):
             segmentInfo = newSegmentInfo[hostName]
             checkNotNone("segmentInfo for %s" % hostName, segmentInfo)
 
@@ -595,7 +595,7 @@ class GpMirrorListToBuild:
                                           remoteHost=hostName,
                                           validationOnly=validationOnly,
                                           forceoverwrite=self.__forceoverwrite,
-                                          tablespaceMapFile=tablespaceMapFile)
+                                          tablespaceMappingFile=tablespaceMappingFile)
         #
         # validate directories for target segments
         #
@@ -649,7 +649,7 @@ class GpMirrorListToBuild:
                     progressCmds.append(progressCmd)
 
             cmds.append(
-                createConfigureNewSegmentCommand(hostName, 'configure blank segments', False, tablespaceMapFile))
+                createConfigureNewSegmentCommand(hostName, 'configure blank segments', False, tablespaceMappingFile))
 
         self.__runWaitAndCheckWorkerPoolForErrorsAndClear(cmds, "unpacking basic segment directory",
                                                           suppressErrorCheck=False,

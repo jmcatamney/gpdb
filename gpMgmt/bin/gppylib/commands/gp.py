@@ -894,7 +894,7 @@ class ConfigureNewSegment(Command):
 
     def __init__(self, name, confinfo, logdir, newSegments=False, tarFile=None,
                  batchSize=None, verbose=False,ctxt=LOCAL, remoteHost=None, validationOnly=False, writeGpIdFileOnly=False,
-                 forceoverwrite=False, tablespaceMapFile=None):
+                 forceoverwrite=False, tablespaceMappingFile=None):
 
         cmdStr = '$GPHOME/bin/lib/gpconfigurenewsegment -c \"%s\" -l %s' % (confinfo, pipes.quote(logdir))
 
@@ -912,8 +912,8 @@ class ConfigureNewSegment(Command):
             cmdStr += " --write-gpid-file-only"
         if forceoverwrite:
             cmdStr += " --force-overwrite"
-        if tablespaceMapFile:
-            cmdStr += " --tablespace-map-file %s" % tablespaceMapFile
+        if tablespaceMappingFile:
+            cmdStr += " --tablespace-mapping-file %s" % tablespaceMappingFile
 
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 

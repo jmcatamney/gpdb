@@ -43,7 +43,7 @@ class ValidationException(Exception):
 
 class ConfExpSegCmd(Command):
     def __init__(self, name, cmdstr, datadir, port, dbid, contentid, newseg, tarfile, useLighterDirectoryValidation, isPrimary,
-                 syncWithSegmentHostname, syncWithSegmentPort, verbose, validationOnly, forceoverwrite, replicationSlotName, logfileDirectory, progressFile, tablespaceMapFile):
+                 syncWithSegmentHostname, syncWithSegmentPort, verbose, validationOnly, forceoverwrite, replicationSlotName, logfileDirectory, progressFile, tablespaceMappingFile):
         """
         @param useLighterDirectoryValidation if True then we don't require an empty directory; we just require that
                                              database stuff is not there.
@@ -62,7 +62,7 @@ class ConfExpSegCmd(Command):
         self.replicationSlotName = replicationSlotName
         self.logfileDirectory = logfileDirectory
         self.progressFile = progressFile
-        self.tablespaceMappings = self.parseTablespaceMapFile(tablespaceMapFile)
+        self.tablespaceMappings = self.parseTablespaceMappingFile(tablespaceMappingFile)
 
         #
         # validationOnly if True then we validate directories and other simple things only; we don't
@@ -112,16 +112,11 @@ class ConfExpSegCmd(Command):
     #
     #     [content]:[location on recovery segment]=[location on failed segment]
     #
-    # For example, the following file contents:
-    #     2:/tmp/newspace/primary=/tmp/newspace/mirror
-    #     4:/tmp/newspace/primary=/tmp/newspace/mirror
-    #     2:/tmp/otherspace/primary=/tmp/otherspace/mirror
-    # indicate that the segment pair for content 2 has mismatches for two tablespaces (newspace and otherspace)
-    # and the segment pair for content 4 has a mismatch for one tablespace (newspace), and in all three cases
-    # the mirrors have failed and will be rebuilt from the corresponding primaries.
+    # See gprecoverseg_help for more details.
+    #
     # The function returns a dictionary mapping each content all of the mappings for that content, to make it
     # easy to pass down to gpconfigurenewsegment on a per-content basis.
-    def parseTablespaceMapFile(self, filename):
+    def parseTablespaceMappingFile(self, filename):
         if filename is None:
             return None
 
@@ -339,7 +334,7 @@ def parseargs():
     parser.add_option("-W", "--write-gpid-file-only", dest="writeGpidFileOnly", action='store_true', default=False)
     parser.add_option('-f', '--force-overwrite', dest='forceoverwrite', action='store_true', default=False)
     parser.add_option('-l', '--log-dir', dest="logfileDirectory", type="string")
-    parser.add_option('-T', '--tablespace-map-file', dest="tablespaceMapFile", type="string")
+    parser.add_option('-T', '--tablespace-mapping-file', dest="tablespaceMappingFile", type="string")
 
     parser.set_defaults(verbose=False, filters=[], slice=(None, None))
 
@@ -432,7 +427,7 @@ try:
                            , replicationSlotName = options.replicationSlotName
                            , logfileDirectory = options.logfileDirectory
                            , progressFile= progressFile
-                           , tablespaceMapFile = options.tablespaceMapFile
+                           , tablespaceMappingFile = options.tablespaceMappingFile
                            )
         pool.addCommand(cmd)
 

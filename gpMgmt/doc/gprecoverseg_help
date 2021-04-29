@@ -9,6 +9,7 @@ Synopsis
 
 gprecoverseg [-p <new_recover_host>[,...]]
              |-i <recover_config_file> 
+             |--tablespace-mapping-file <tablespace_mapping_file>
              [-d <master_data_directory>] [-B <parallel_processes>] 
              [-F] [-a] [-q] [-s] [--no-progress] [-l <logfile_directory>]
 
@@ -170,6 +171,35 @@ Obtaining a Sample File
 
 You can use the -o option to output a sample recovery configuration file 
 to use as a starting point.
+
+
+--tablespace-mapping-file <tablespace_mapping_file>
+
+Specifies the name of a file with the details about tablespaces that exist
+at different locations on the primary and mirror of a given segment pair.
+If a single segment has multiple mismatched tablespaces, a separate line
+is required for each.  Each line in the file is in the following format.
+
+<content id>:<location on recovery segment>=<location on failed segment>
+
+Locations should be absolute paths to tablespace directories, excluding the
+dbid directory added automatically by CREATE TABLESPACE, if applicable. For
+example, if the full path for segment 5 is /data/tablespace/5, only the path
+/data/tablespace should be used.
+
+Examples
+
+One mirror with one mismatched tablespace
+
+1:/data/tablespaces/primary=/data/tablespaces/mirror
+
+Two mirrors with one tablespace each and one primary with two tablespaces
+
+1:/data/nfs1/primary=/data/nfs2/mirror
+3:/data/nfs1/primary=/data/nfs2/mirror
+2:/data/mirror/ts1=/data/primary/ts1
+2:/data/mirror/ts2=/data/primary/ts2
+
 
 -l <logfile_directory>
 

@@ -673,11 +673,11 @@ class GpRecoverSegmentProgram:
                 self.syncPackages(new_hosts)
 
             # sync tablespace map file, if it exists
-            if self.__options.tablespaceMapFile:
-                self.copy_tablespace_map_file_to_segments(gpArray, mirrorBuilder, self.__options.tablespaceMapFile)
+            if self.__options.tablespaceMappingFile:
+                self.copy_tablespace_map_file_to_segments(gpArray, mirrorBuilder, self.__options.tablespaceMappingFile)
 
             config_primaries_for_replication(gpArray, self.__options.hba_hostnames)
-            if not mirrorBuilder.buildMirrors("recover", gpEnv, gpArray, self.__options.tablespaceMapFile):
+            if not mirrorBuilder.buildMirrors("recover", gpEnv, gpArray, self.__options.tablespaceMappingFile):
                 sys.exit(1)
 
             confProvider.sendPgElogFromMaster("Recovery of %d segment(s) has been started." % \
@@ -798,8 +798,8 @@ class GpRecoverSegmentProgram:
         addTo.add_option('', '--hba-hostnames', action='store_true', dest='hba_hostnames',
                          help='use hostnames instead of CIDR in pg_hba.conf')
         addTo.add_option("", "--tablespace-map-file", type="string",
-                         dest="tablespaceMapFile",
-                         metavar="<tablespaceMapFile>",
+                         dest="tablespaceMappingFile",
+                         metavar="<tablespaceMappingFile>",
                          help="File giving primary-mirror tablespace mapping if differing tablespace locations are used")
 
         parser.set_defaults()
