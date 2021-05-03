@@ -176,7 +176,7 @@ class PgControlData(Command):
 
 class PgBaseBackup(Command):
     def __init__(self, pgdata, host, port, replication_slot_name=None, excludePaths=[], ctxt=LOCAL, remoteHost=None, forceoverwrite=False, target_gp_dbid=0, logfile=None,
-                 recovery_mode=True, tablespace_mappings=[]):
+                 recovery_mode=True, tablespace_mappings_list=None):
         cmd_tokens = ['pg_basebackup', '-c', 'fast']
         cmd_tokens.append('-D')
         cmd_tokens.append(pgdata)
@@ -192,8 +192,8 @@ class PgBaseBackup(Command):
         if recovery_mode:
             cmd_tokens.append('--write-recovery-conf')
 
-        if tablespace_mappings and len(tablespace_mappings) > 0:
-            for mapping in tablespace_mappings:
+        if tablespace_mappings_list:
+            for mapping in tablespace_mappings_list:
                 cmd_tokens.append('--tablespace-mapping=%s' % mapping)
 
         # This is needed to handle Greenplum tablespaces

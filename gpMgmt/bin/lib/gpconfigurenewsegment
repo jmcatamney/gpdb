@@ -43,7 +43,7 @@ class ValidationException(Exception):
 
 class ConfExpSegCmd(Command):
     def __init__(self, name, cmdstr, datadir, port, dbid, contentid, newseg, tarfile, useLighterDirectoryValidation, isPrimary,
-                 syncWithSegmentHostname, syncWithSegmentPort, verbose, validationOnly, forceoverwrite, replicationSlotName, logfileDirectory, progressFile, tablespaceMappingFile):
+                 syncWithSegmentHostname, syncWithSegmentPort, verbose, validationOnly, forceoverwrite, replicationSlotName, logfileDirectory, progressFile, tablespaceMappingList):
         """
         @param useLighterDirectoryValidation if True then we don't require an empty directory; we just require that
                                              database stuff is not there.
@@ -62,7 +62,7 @@ class ConfExpSegCmd(Command):
         self.replicationSlotName = replicationSlotName
         self.logfileDirectory = logfileDirectory
         self.progressFile = progressFile
-        self.tablespaceMappings = self.parseTablespaceMappingFile(tablespaceMappingFile)
+        self.tablespaceMappingList = tablespaceMappingList
 
         #
         # validationOnly if True then we validate directories and other simple things only; we don't
@@ -107,40 +107,6 @@ class ConfExpSegCmd(Command):
         else:
             os.makedirs(path, 0700)
 
-    # The map file should consist of one line per tablespace per mismatched segment pair, where each line
-    # has the following format:
-    #
-    #     [content]:[location on recovery segment]=[location on failed segment]
-    #
-    # See gprecoverseg_help for more details.
-    #
-    # The function returns a dictionary mapping each content all of the mappings for that content, to make it
-    # easy to pass down to gpconfigurenewsegment on a per-content basis.
-    def parseTablespaceMappingFile(self, filename):
-        if filename is None:
-            return None
-
-        lines = []
-        mappings = {}
-        with open(filename, 'r') as fd:
-            lines = fd.read().splitlines()
-
-        for line in lines:
-            tokens = line.split(':')
-            if len(tokens) != 2:
-                raise Exception("Invalid line format in tablespace map file: %s" % line)
-            content, mapping = tokens[0], tokens[1]
-            tokens = mapping.split('=')
-            if len(tokens) != 2:
-                raise Exception("Invalid line format in tablespace map file: %s" % line)
-            # Don't do anything with tokens; we're leaving mapping in 'foo=bar' format, just checking the syntax
-            content = int(content)
-            if content not in mappings:
-                mappings[content] = []
-            mappings[content].append(mapping)
-
-        return mappings
-
     def run(self):
         try:
             if self.newseg:
@@ -172,11 +138,6 @@ class ConfExpSegCmd(Command):
                                                                                 datetime.datetime.today().strftime('%Y%m%d_%H%M%S'),
                                                                                 self.dbid)
 
-                    # Extract the tablespace mappings used for this particular segment pair
-                    tablespace_mappings = None
-                    if self.tablespaceMappings and self.contentid in self.tablespaceMappings:
-                        tablespace_mappings = self.tablespaceMappings[self.contentid]
-
                     # Create a mirror based on the primary
                     cmd = PgBaseBackup(pgdata=self.datadir,
                                        host=self.syncWithSegmentHostname,
@@ -185,7 +146,7 @@ class ConfExpSegCmd(Command):
                                        forceoverwrite=self.forceoverwrite,
                                        target_gp_dbid=self.dbid,
                                        logfile=self.progressFile,
-                                       tablespace_mappings=tablespace_mappings)
+                                       tablespace_mappings_list=self.tablespaceMappingList)
                     try:
                         logger.info("Running pg_basebackup with progress output temporarily in %s" % self.progressFile)
                         cmd.run(validateAfter=True)
@@ -334,7 +295,7 @@ def parseargs():
     parser.add_option("-W", "--write-gpid-file-only", dest="writeGpidFileOnly", action='store_true', default=False)
     parser.add_option('-f', '--force-overwrite', dest='forceoverwrite', action='store_true', default=False)
     parser.add_option('-l', '--log-dir', dest="logfileDirectory", type="string")
-    parser.add_option('-T', '--tablespace-mapping-file', dest="tablespaceMappingFile", type="string")
+    parser.add_option('-T', '--tablespace-mapping', dest="tablespaceMappingList", action='append', type="string")
 
     parser.set_defaults(verbose=False, filters=[], slice=(None, None))
 
@@ -427,7 +388,7 @@ try:
                            , replicationSlotName = options.replicationSlotName
                            , logfileDirectory = options.logfileDirectory
                            , progressFile= progressFile
-                           , tablespaceMappingFile = options.tablespaceMappingFile
+                           , tablespaceMappingList= options.tablespaceMappingList
                            )
         pool.addCommand(cmd)
 

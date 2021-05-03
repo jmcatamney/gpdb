@@ -19,7 +19,7 @@
 from gppylib.mainUtils import *
 
 from optparse import OptionGroup
-import os, sys, signal, time
+import os, re, sys, signal, time
 from gppylib import gparray, gplog, userinput, utils
 from gppylib.util import gp_utils
 from gppylib.commands import gp, pg, unix
@@ -672,12 +672,13 @@ class GpRecoverSegmentProgram:
             if new_hosts:
                 self.syncPackages(new_hosts)
 
-            # sync tablespace map file, if it exists
+            # parse tablespace mapping file, if it exists
+            mappings = {}
             if self.__options.tablespaceMappingFile:
-                self.copy_tablespace_map_file_to_segments(gpArray, mirrorBuilder, self.__options.tablespaceMappingFile)
+                mappings = self.parse_tablespace_mapping_file(self.__options.tablespaceMappingFile)
 
             config_primaries_for_replication(gpArray, self.__options.hba_hostnames)
-            if not mirrorBuilder.buildMirrors("recover", gpEnv, gpArray, self.__options.tablespaceMappingFile):
+            if not mirrorBuilder.buildMirrors("recover", gpEnv, gpArray, mappings):
                 sys.exit(1)
 
             confProvider.sendPgElogFromMaster("Recovery of %d segment(s) has been started." % \
@@ -690,6 +691,38 @@ class GpRecoverSegmentProgram:
             self.logger.info("********************************")
 
         sys.exit(0)
+
+    # The mapping file should consist of one line per tablespace per mismatched segment pair, where each line
+    # has the following format:
+    #
+    #     [content]:[location on recovery segment]=[location on failed segment]
+    #
+    # See gprecoverseg_help for more details.
+    #
+    # The function returns a dictionary mapping each content all of the mappings for that content, to make it
+    # easy to pass down to gpconfigurenewsegment on a per-content basis.
+    def parse_tablespace_mapping_file(self, filename):
+        if filename is None:
+            return None
+
+        lines = []
+        mappings = {}
+        with open(filename, 'r') as fd:
+            lines = fd.read().splitlines()
+
+        for line in lines:
+            result = re.match("^(?P<content>[\d]+):(?P<old>.+)=(?P<new>.+)$", line)
+            if result:
+                d = result.groupdict()
+                content = int(d["content"])
+                mapping = d["old"] + '=' + d["new"]
+                if content not in mappings:
+                    mappings[content] = []
+                mappings[content].append(mapping)
+            else:
+                raise Exception("Invalid line format in tablespace map file: %s" % line)
+
+        return mappings
 
     def trigger_fts_probe(self, port=0):
         self.logger.info('Triggering FTS probe')
@@ -720,18 +753,6 @@ class GpRecoverSegmentProgram:
             raise Exception("Heap checksum setting differences reported on segments")
         self.logger.info("Heap checksum setting is consistent between master and the segments that are candidates "
                          "for recoverseg")
-
-    def copy_tablespace_map_file_to_segments(self, gpArray, mirrorBuilder, map_filename):
-        failed_segments = [target.getFailedSegment() for target in mirrorBuilder.getMirrorsToBuild()]
-        if len(failed_segments) == 0:
-            self.logger.info("There are no segments to recover, skipping copy of tablespace map file.")
-            return
-
-        master_host = gpArray.master.getSegmentHostName()
-        dest_hosts = [seg.getSegmentHostName() for seg in failed_segments if seg.getSegmentHostName() != master_host]
-        if len(dest_hosts) > 0: # no need to copy the file if all failed segments are on the master host
-            cmd = Command('copy tablespace map file to segments', cmdStr = "gpscp -h %s %s =:%s" % (' -h '.join(dest_hosts), map_filename, map_filename))
-            cmd.run(validateAfter=True)
 
     def cleanup(self):
         if self.__pool:
