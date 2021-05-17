@@ -177,7 +177,7 @@ def lookupGpdb(address, port, dataDirectory):
     return None
 
 # -------------------------------------------------------------------------
-def getsegmentTablespaceDirs(dataDirectory):
+def getSegmentTablespaceDirs(dataDirectory):
     """ Create list of user-created tablespace locations for a segment data directory """
 
     tblspclocs = []
@@ -452,13 +452,19 @@ try:
     cmd = GpRecoverSeg("Running gprecoverseg", options=recoversegOptions)
     cmd.run(validateAfter=True)
 
-    """ Delete old mirror directories. """
+    """ Reinitialize gparray after the new mirrors are in place. """
+    gpArrayInstance = GpArray.initFromCatalog(dburl, utility=True)
+
+    """ Delete old mirror directories, ensuring we don't delete new mirrors moved to the same locations as old mirrors.  """
+    mirrorDirectories = [seg.getSegmentDataDirectory() for seg in gpArrayInstance.getDbList() if seg.isSegmentMirror()]
+    mirrorsToDelete = [m for m in mirrorsToDelete if not m.dataDirectory in mirrorDirectories]
+
     if numberOfWorkers > 0:
         pool = WorkerPool(numWorkers=numberOfWorkers)
         for mirror in mirrorsToDelete:
             logger.info("About to remove old mirror segment directory: " + mirror.dataDirectory)
             try:
-                tblspc_directory = getsegmentTablespaceDirs(mirror.dataDirectory)
+                tblspc_directory = getSegmentTablespaceDirs(mirror.dataDirectory)
                 for tblspc_dir in tblspc_directory:
                     cmd = RemoveDirectory("remove old mirror tablespace directories", "".join(tblspc_dir[0]), ctxt=REMOTE,
                                           remoteHost=mirror.address)

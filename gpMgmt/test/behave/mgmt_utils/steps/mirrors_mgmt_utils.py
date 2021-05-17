@@ -1,6 +1,7 @@
 from os import path
 from contextlib import closing
 
+from gppylib.commands.base import REMOTE
 from gppylib.commands.gp import get_coordinatordatadir
 
 from behave import given, when, then
@@ -420,3 +421,32 @@ def impl(context, mirror_config):
 
             fd.write(line_template % (old_address, old_port, old_directory, new_address, new_port, new_directory))
         fd.flush()
+
+@then('verify the tablespace directories on host "{host}" for content "{content}" are {status}')
+def impl(context, host, content, status):
+    if status not in ["deleted", "valid"]:
+        raise Exception('Unknown status.  Valid values are "deleted" and "valid"')
+    locations = []
+    dbid = -2
+    with closing(dbconn.connect(dbconn.DbURL(dbname="postgres"), unsetSearchPath=False)) as conn:
+        oids_query = "SELECT oid FROM pg_tablespace WHERE spcname NOT IN ('pg_default', 'pg_global')"
+        location_query = "SELECT t.tblspc_loc FROM gp_tablespace_location(%s) t JOIN gp_segment_configuration c ON t.gp_segment_id = c.content WHERE c.content = %s AND c.preferred_role = 'm'"
+
+        oids = [row[0] for row in dbconn.query(conn, oids_query).fetchall()]
+        dbid = dbconn.querySingleton(conn, "SELECT dbid FROM gp_segment_configuration WHERE content = %s AND preferred_role = 'm'" % content)
+        for oid in oids:
+            locations.append(dbconn.querySingleton(conn, location_query % (oid, content)))
+
+    cmd = Command(name="check tablespace dirs", cmdStr="for f in %s; do find $f -name %s -type f -print 2> /dev/null; done" % (" ".join(locations), dbid), ctxt=REMOTE, remoteHost=host)
+    cmd.run(validateAfter=True)
+    output = cmd.get_results().stdout.strip()
+
+    if status == "deleted":
+        if output != "":
+            raise Exception("One or more directories have not been deleted:\n%s" % output)
+    else:
+        existing_dirs = output.split("\n")
+        if existing_dirs != locations:
+           missing_dirs = [d for d in locations if d not in existing_dirs]
+           raise Exception("One or more directories are not present on %s: %s" % (host, missing_dirs))
+
